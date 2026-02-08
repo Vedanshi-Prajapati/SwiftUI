@@ -29,9 +29,42 @@
 		ECE976F02F348C3100975E8D /* artformUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = artformUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EC3F410E2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Info.plist/SourceSerifPro-Black.ttf",
+				"Info.plist/SourceSerifPro-Bold.ttf",
+				"Info.plist/SourceSerifPro-ExtraLight.ttf",
+				"Info.plist/SourceSerifPro-Light.ttf",
+				"Info.plist/SourceSerifPro-Regular.ttf",
+				"Info.plist/SourceSerifPro-SemiBold.ttf",
+				MadhubaniUI.swift,
+			);
+			target = ECE976E52F348C3100975E8D /* artformTests */;
+		};
+		EC3F410F2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Info.plist/SourceSerifPro-Black.ttf",
+				"Info.plist/SourceSerifPro-Bold.ttf",
+				"Info.plist/SourceSerifPro-ExtraLight.ttf",
+				"Info.plist/SourceSerifPro-Light.ttf",
+				"Info.plist/SourceSerifPro-Regular.ttf",
+				"Info.plist/SourceSerifPro-SemiBold.ttf",
+				MadhubaniUI.swift,
+			);
+			target = ECE976EF2F348C3100975E8D /* artformUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ECE976DB2F348C2F00975E8D /* artform */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EC3F410E2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformTests" target */,
+				EC3F410F2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformUITests" target */,
+			);
 			path = artform;
 			sourceTree = "<group>";
 		};

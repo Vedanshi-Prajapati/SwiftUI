@@ -1,5 +1,4 @@
 
-// CanvasView.swift
 import SwiftUI
 import UIKit
 
@@ -19,16 +18,13 @@ struct CanvasView: UIViewRepresentable {
             v.setLayers(fill: engine.fillLayer, ink: engine.inkLayer)
         }
         v.requestTemplateBoundary = { size in
-            // The SwiftUI overlay shows template visually,
-            // but boundary layer must be set from the actual template image.
-            // We’ll set this from outside using `setTemplateBoundary(...)` in the hosting view if needed.
+            
             _ = size
         }
         return v
     }
 
     func updateUIView(_ uiView: CanvasUIView, context: Context) {
-        // Keep layers in sync
         uiView.setLayers(fill: engine.fillLayer, ink: engine.inkLayer)
         uiView.activeTool = engine.config.activeTool
     }
@@ -78,7 +74,6 @@ final class CanvasUIView: UIView {
         points = [p]
 
         if activeTool == .bucket || activeTool == .pattern {
-            // One-tap fill
             onFill?(p, bounds.size)
         }
     }

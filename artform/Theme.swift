@@ -1,6 +1,4 @@
 
-//  Theme.swift
-
 import SwiftUI
 
 enum MTheme {

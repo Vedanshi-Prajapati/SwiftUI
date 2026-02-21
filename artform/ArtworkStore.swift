@@ -1,4 +1,3 @@
-// ArtworkStore.swift
 import Foundation
 import UIKit
 

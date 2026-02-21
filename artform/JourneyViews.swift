@@ -1,4 +1,4 @@
-// JourneyViews.swift
+
 import SwiftUI
 
 let demoLevels: [Level] = [
@@ -71,6 +71,8 @@ struct LevelPreviewView: View {
                     .padding(18)
                     .opacity(0.28) // faint finished artwork
             }
+            .overlay(BorderOverlay())
+
             .padding(.horizontal, 16)
             .frame(height: 420)
 
@@ -83,7 +85,7 @@ struct LevelPreviewView: View {
                     .padding(.vertical, 14)
                     .background(MTheme.terracotta.opacity(0.92))
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
                     .padding(.horizontal, 16)
             }
 
@@ -107,7 +109,7 @@ struct MicroTeachView: View {
                 .foregroundStyle(MTheme.ink.opacity(0.8))
                 .padding(16)
                 .background(MTheme.paper)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
 
             Spacer()
 
@@ -120,7 +122,7 @@ struct MicroTeachView: View {
                     .padding(.vertical, 14)
                     .background(MTheme.terracotta.opacity(0.92))
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .padding(.bottom, 24)
         }
@@ -154,7 +156,7 @@ struct CelebrateView: View {
                     .padding(.vertical, 14)
                     .background(MTheme.terracotta.opacity(0.92))
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)

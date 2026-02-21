@@ -56,10 +56,21 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		EC8D2E842F4321FA00ABA67E /* Exceptions for "artform" folder in "Compile Sources" phase from "artform" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = ECE976D52F348C2F00975E8D /* Sources */;
+			membershipExceptions = (
+				"artform-Bridging-Header.h",
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ECE976DB2F348C2F00975E8D /* artform */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				EC8D2E842F4321FA00ABA67E /* Exceptions for "artform" folder in "Compile Sources" phase from "artform" target */,
 				EC3F410E2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformTests" target */,
 				EC3F410F2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformUITests" target */,
 			);

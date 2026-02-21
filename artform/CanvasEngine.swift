@@ -1,4 +1,4 @@
-// CanvasEngine.swift
+
 import SwiftUI
 import UIKit
 
@@ -16,8 +16,7 @@ struct CanvasEngine {
         var doubleStrokeOffset: CGFloat = 4.0
 
         var stabilizerOn: Bool = true
-        var symmetryOn: Bool = true // vertical center only
-
+        var symmetryOn: Bool = true
 
         var gapTolerance: Int = 3
         var boundaryIncludesTemplate: Bool = true
@@ -27,10 +26,8 @@ struct CanvasEngine {
 
     var config = Config()
 
-
-    private(set) var fillLayer: UIImage? = nil   // pattern/solid fills
-    private(set) var inkLayer: UIImage? = nil    // strokes
-
+    private(set) var fillLayer: UIImage? = nil
+    private(set) var inkLayer: UIImage? = nil
     private(set) var templateBoundaryLayer: UIImage? = nil
 
     private(set) var undoStack: [(UIImage?, UIImage?)] = []
@@ -55,7 +52,7 @@ struct CanvasEngine {
             ctx.fill(CGRect(origin: .zero, size: canvasSize))
 
             let rect = aspectFitRect(imageSize: template.size, in: CGRect(origin: .zero, size: canvasSize)).insetBy(dx: 24, dy: 24)
-            template.draw(in: rect, blendMode: .normal, alpha: 0.55) // stronger for boundary detection
+            template.draw(in: rect, blendMode: .normal, alpha: 0.55)
         }
 
         templateBoundaryLayer = img
@@ -97,8 +94,6 @@ struct CanvasEngine {
         }
     }
 
-    // MARK: - Stroke drawing
-
     mutating func applyStroke(points: [CGPoint], canvasSize: CGSize) {
         guard points.count >= 2 else { return }
         pushUndoSnapshot()
@@ -130,13 +125,10 @@ struct CanvasEngine {
         return pts
     }
 
-    // MARK: - Bucket/Pattern Fill
-
     mutating func fill(at point: CGPoint, canvasSize: CGSize) {
         pushUndoSnapshot()
 
         guard let boundary = makeBoundaryBitmap(canvasSize: canvasSize) else { return }
-
         guard let mask = floodFillMask(boundary: boundary, seed: point, size: canvasSize, gapTolerance: config.gapTolerance) else { return }
 
         let patternTile = makePatternTile(kind: config.pattern, color: config.strokeColor.withAlphaComponent(0.8))
@@ -144,8 +136,6 @@ struct CanvasEngine {
 
         fillLayer = merge(over: fillLayer, add: filled)
     }
-
-    // MARK: - Internal raster helpers
 
     private func drawSingleStroke(on base: UIImage?, points: [CGPoint], size: CGSize) -> UIImage? {
         render(size: size) { ctx in
@@ -200,65 +190,95 @@ struct CanvasEngine {
     }
 
     private func floodFillMask(boundary: UIImage, seed: CGPoint, size: CGSize, gapTolerance: Int) -> UIImage? {
-       
         guard let cg = boundary.cgImage else { return nil }
-        let w = cg.width, h = cg.height
 
-        let sx = min(max(Int(seed.x * CGFloat(w) / size.width), 0), w-1)
-        let sy = min(max(Int(seed.y * CGFloat(h) / size.height), 0), h-1)
+        let w = cg.width
+        let h = cg.height
+        guard w > 0, h > 0 else { return nil }
 
         guard let data = cg.dataProvider?.data else { return nil }
         let ptr = CFDataGetBytePtr(data)!
+        let bpr = cg.bytesPerRow
 
+        let sx = min(max(Int(seed.x * CGFloat(w) / max(size.width, 1)), 0), w - 1)
+        let sy = min(max(Int(seed.y * CGFloat(h) / max(size.height, 1)), 0), h - 1)
+
+        
         func isBoundary(_ x: Int, _ y: Int) -> Bool {
-            let idx = (y * w + x) * 4
-            let r = Int(ptr[idx])
-            let g = Int(ptr[idx+1])
-            let b = Int(ptr[idx+2])
+            if x < 0 || y < 0 || x >= w || y >= h { return true }
+
+            let idx = y * bpr + x * 4
+            let b = Int(ptr[idx + 0])
+            let g = Int(ptr[idx + 1])
+            let r = Int(ptr[idx + 2])
+
+            
             return (r + g + b) < 240 * 3
         }
 
-        if isBoundary(sx, sy) { return nil }
+        if isBoundaryWithTolerance(isBoundary: isBoundary, x: sx, y: sy, w: w, h: h, tol: gapTolerance) {
+            return nil
+        }
 
-        var visited = Array(repeating: false, count: w*h)
-        var queue: [(Int, Int)] = [(sx, sy)]
-        visited[sy*w + sx] = true
+        var mask = [UInt8](repeating: 0, count: w * h)
+        var visited = [UInt8](repeating: 0, count: w * h)
 
-        var region = Array(repeating: UInt8(0), count: w*h) // 0/255
+        @inline(__always) func index(_ x: Int, _ y: Int) -> Int { y * w + x }
 
-        while !queue.isEmpty {
-            let (x, y) = queue.removeLast()
-            region[y*w + x] = 255
+        var queue = [Int]()
+        queue.reserveCapacity(w * h / 8)
 
-            let neighbors = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
+        queue.append(index(sx, sy))
+        visited[index(sx, sy)] = 1
+
+        var head = 0
+        while head < queue.count {
+            let v = queue[head]; head += 1
+            let x = v % w
+            let y = v / w
+            if isBoundaryWithTolerance(isBoundary: isBoundary, x: x, y: y, w: w, h: h, tol: gapTolerance) {
+                continue
+            }
+
+            mask[v] = 255
+
+            let neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
             for (nx, ny) in neighbors {
                 if nx < 0 || ny < 0 || nx >= w || ny >= h { continue }
-                let idx = ny*w + nx
-                if visited[idx] { continue }
-                visited[idx] = true
-
-                if isBoundaryWithTolerance(isBoundary: isBoundary, x: nx, y: ny, w: w, h: h, tol: gapTolerance) {
-                    continue
-                }
-                queue.append((nx, ny))
+                let ni = index(nx, ny)
+                if visited[ni] == 1 { continue }
+                visited[ni] = 1
+                queue.append(ni)
             }
         }
 
-        return makeMaskImage(bytes: region, width: w, height: h)
+        return makeMaskImage(bytes: mask, width: w, height: h)
     }
 
-    private func isBoundaryWithTolerance(isBoundary: (Int, Int) -> Bool, x: Int, y: Int, w: Int, h: Int, tol: Int) -> Bool {
-        if isBoundary(x,y) { return true }
+    private func isBoundaryWithTolerance(
+        isBoundary: (Int, Int) -> Bool,
+        x: Int,
+        y: Int,
+        w: Int,
+        h: Int,
+        tol: Int
+    ) -> Bool {
+        if isBoundary(x, y) { return true }
         if tol <= 0 { return false }
-        let r = tol
-        for yy in (y-r)...(y+r) {
-            for xx in (x-r)...(x+r) {
-                if xx < 0 || yy < 0 || xx >= w || yy >= h { continue }
+
+        let x0 = max(0, x - tol)
+        let x1 = min(w - 1, x + tol)
+        let y0 = max(0, y - tol)
+        let y1 = min(h - 1, y + tol)
+
+        for yy in y0...y1 {
+            for xx in x0...x1 {
                 if isBoundary(xx, yy) { return true }
             }
         }
         return false
     }
+
 
     private func makePatternTile(kind: PatternKind, color: UIColor) -> UIImage {
         let tileSize = CGSize(width: 24, height: 24)
@@ -330,19 +350,17 @@ struct CanvasEngine {
         }
     }
 
-    // MARK: - Utilities
-
     private func blankImage(size: CGSize, transparent: Bool = false) -> UIImage {
         render(size: size) { ctx in
             let rect = CGRect(origin: .zero, size: size)
-            (transparent ? UIColor.clear : UIColor.clear).setFill()
+            UIColor.clear.setFill()
             ctx.fill(rect)
         }
     }
 
     private func render(size: CGSize, _ draw: (CGContext) -> Void) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
-        format.scale = UIScreen.main.scale
+        format.scale = UITraitCollection.current.displayScale
         format.opaque = false
         let r = UIGraphicsImageRenderer(size: size, format: format)
         return r.image { ctx in
@@ -415,6 +433,6 @@ struct CanvasEngine {
             shouldInterpolate: false,
             intent: .defaultIntent
         ) else { return nil }
-        return UIImage(cgImage: cg, scale: UIScreen.main.scale, orientation: .up)
+        return UIImage(cgImage: cg, scale: UITraitCollection.current.displayScale, orientation: .up)
     }
 }

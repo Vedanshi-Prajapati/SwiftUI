@@ -1,4 +1,4 @@
-// MadhubaniApp.swift
+
 import SwiftUI
 
 @main

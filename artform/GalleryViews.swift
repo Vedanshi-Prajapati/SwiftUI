@@ -1,4 +1,4 @@
-// GalleryViews.swift
+
 import SwiftUI
 
 struct GalleryView: View {
@@ -70,7 +70,10 @@ struct ArtworkDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .frame(height: 520)
+                .overlay(BorderOverlay())
+
             }
+            
 
             Text(art.title)
                 .font(MTheme.heading(26))

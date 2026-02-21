@@ -1,4 +1,4 @@
-// FreeDrawView.swift
+
 import SwiftUI
 
 struct FreeDrawView: View {
@@ -18,7 +18,7 @@ struct FreeDrawView: View {
             VStack(spacing: 10) {
                 HStack {
                     Text("Create")
-                        .font(MTheme.heading(26))
+                        .font(.custom("SourceSerifPro-Bold", size: 22))
                     Spacer()
                     Button {
                         let dur = Int(Date().timeIntervalSince(startTime))
@@ -38,10 +38,11 @@ struct FreeDrawView: View {
                     } label: {
                         Text("Save")
                             .font(MTheme.bodyRounded(15, weight: .semibold))
+                            
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(MTheme.paper)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
                 }
                 .padding(.horizontal, 16)
@@ -55,6 +56,7 @@ struct FreeDrawView: View {
                         .padding(.horizontal, 12)
                 }
                 .frame(maxHeight: .infinity)
+                .overlay(BorderOverlay())
 
                 ToolRow(
                     tool: $tool,

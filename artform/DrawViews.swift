@@ -1,4 +1,3 @@
-// DrawViews.swift
 import SwiftUI
 
 enum Tool: String {
@@ -36,7 +35,6 @@ struct LevelDrawView: View {
                     .font(MTheme.heading(26))
                 Spacer()
                 Button {
-                    // Finish → snapshot to gallery + celebrate
                     let dur = Int(Date().timeIntervalSince(startTime))
                     let pngName = "\(UUID().uuidString).png"
                     let art = Artwork(
@@ -59,7 +57,7 @@ struct LevelDrawView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(MTheme.paper)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
             }
             .padding(.horizontal, 16)
@@ -82,26 +80,29 @@ struct LevelDrawView: View {
                     }
             }
             .frame(maxHeight: .infinity)
+            .overlay(BorderOverlay())
 
-            ToolRow(
-                tool: $tool,
-                isDoubleStroke: $isDoubleStroke,
-                showPalette: $showPalette,
-                showPatterns: $showPatterns,
-                assistOn: $assistOn,
-                symmetryOn: $symmetryOn,
-                canUndo: engine.canUndo,
-                canRedo: engine.canRedo,
-                onUndo: { engine.undo() },
-                onRedo: { engine.redo() }
-            )
+            .safeAreaInset(edge: .bottom) {
+                ToolBar(
+                    tools: [
+                        .init(tool: .brush, icon: "paintbrush.pointed", label: "Brush"),
+                        .init(tool: .bucket, icon: "paintbrush", label: "Bucket"),
+                        .init(tool: .palette, icon: "paintpalette", label: "Palette"),
+                        .init(tool: .resize, icon: "arrow.up.left.and.arrow.down.right", label: "Resize"),
+                        .init(tool: .chevron, icon: "chevron.up", label: "Tools")
+                    ],
+                    onTap: { tool in
+                        print(tool) // connect this to CanvasEngine
+                    }
+                )
+            }
+
             .padding(.horizontal, 12)
             .padding(.bottom, 10)
         }
         .background(MTheme.canvas)
         .onAppear {
             startTime = Date()
-            // configure engine defaults
             engine.config.gapTolerance = 3
             engine.config.boundaryIncludesTemplate = true
             engine.config.fillBelowInk = true
@@ -153,7 +154,7 @@ struct ToolRow: View {
     var body: some View {
         HStack(spacing: 10) {
             toolButton("Brush", system: "pencil", selected: tool == .brush) { tool = .brush }
-            toolButton("Bucket", system: "paintbucket", selected: tool == .bucket) { tool = .bucket }
+            toolButton("Bucket", system: "paint.bucket.classic", selected: tool == .bucket) { tool = .bucket }
             toolButton("Pattern", system: "square.grid.3x3.fill", selected: tool == .pattern) { tool = .pattern }
 
             Button { showPalette = true } label: {

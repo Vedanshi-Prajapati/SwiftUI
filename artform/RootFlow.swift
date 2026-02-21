@@ -1,4 +1,3 @@
-// RootFlow.swift
 import SwiftUI
 
 struct RootFlow: View {
@@ -18,20 +17,28 @@ struct RootFlow: View {
                 }
             }
         }
+        .overlay(BorderOverlay())
+
     }
 }
 
 struct RootTabs: View {
     var body: some View {
         TabView {
-            JourneyRoadmapView()
-                .tabItem { Label("Journey", systemImage: "map") }
+            NavigationStack {
+                RoadmapView() 
+            }
+            .tabItem { Label("Journey", systemImage: "map") }
 
-            GalleryView()
-                .tabItem { Label("Gallery", systemImage: "photo.on.rectangle") }
+            NavigationStack {
+                GalleryView()
+            }
+            .tabItem { Label("Gallery", systemImage: "photo.on.rectangle") }
 
-            FreeDrawView()
-                .tabItem { Label("Create", systemImage: "pencil.tip") }
+            NavigationStack {
+                FreeDrawView()
+            }
+            .tabItem { Label("Create", systemImage: "pencil.tip") }
         }
     }
 }
@@ -61,7 +68,7 @@ struct OnboardingView: View {
                     .padding(.vertical, 14)
                     .background(MTheme.terracotta.opacity(0.92))
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
                     .padding(.horizontal, 18)
             }
             .padding(.bottom, 24)

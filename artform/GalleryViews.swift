@@ -1,55 +1,64 @@
-
 import SwiftUI
 
 struct GalleryView: View {
     @EnvironmentObject private var app: AppState
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(app.artworks) { art in
-                        NavigationLink {
-                            ArtworkDetailView(art: art)
-                        } label: {
-                            HStack(spacing: 12) {
-                                if let img = try? app.store.loadArtworkPNG(filename: art.pngFilename) {
-                                    Image(uiImage: img)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 84, height: 84)
-                                        .clipped()
-                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                } else {
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(MTheme.paper)
-                                        .frame(width: 84, height: 84)
-                                }
-
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(art.title)
-                                        .font(MTheme.heading(20))
-                                        .foregroundStyle(MTheme.ink)
-
-                                    Text("\(art.createdAt.formatted(date: .abbreviated, time: .shortened)) • \(art.durationSeconds)s")
-                                        .font(MTheme.bodyRounded(13))
-                                        .foregroundStyle(MTheme.ink.opacity(0.7))
-                                }
-                                Spacer()
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(app.artworks) { art in
+                    NavigationLink {
+                        ArtworkDetailView(art: art)
+                    } label: {
+                        HStack(spacing: 12) {
+                            if let img = try? app.store.loadArtworkPNG(filename: art.pngFilename) {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 84, height: 84)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                            } else {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color(.secondarySystemBackground))
+                                    .frame(width: 84, height: 84)
                             }
-                            .padding(12)
-                            .background(MTheme.paper)
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
-                            .padding(.horizontal, 16)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(art.title)
+                                    .font(.custom("Georgia-Bold", size: 18))
+                                    .foregroundStyle(.primary)
+
+                                Text(art.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.custom("Georgia", size: 13))
+                                    .foregroundStyle(.secondary)
+
+                                if let lid = art.levelId {
+                                    Text("Level \(lid)")
+                                        .font(.custom("Georgia", size: 12))
+                                        .foregroundColor(Color(hex: "#C8392B"))
+                                }
+                            }
+                            Spacer()
                         }
+                        .padding(12)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .padding(.horizontal, 16)
                     }
                 }
-                .padding(.top, 10)
-                .padding(.bottom, 16)
             }
-            .background(MTheme.canvas)
-            .navigationTitle("Gallery")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(.top, 10)
+            .padding(.bottom, 16)
+        }
+        .background(Color(hex: "#F0EBE0").ignoresSafeArea())
+        .navigationTitle("Gallery")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Gallery")
+                    .font(.custom("Georgia-Bold", size: 20))
+            }
         }
     }
 }
@@ -62,7 +71,8 @@ struct ArtworkDetailView: View {
         VStack(spacing: 12) {
             if let img = try? app.store.loadArtworkPNG(filename: art.pngFilename) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 22).fill(MTheme.paper)
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(Color(.secondarySystemBackground))
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFit()
@@ -70,20 +80,23 @@ struct ArtworkDetailView: View {
                 }
                 .padding(.horizontal, 16)
                 .frame(height: 520)
-                .overlay(BorderOverlay())
-
             }
-            
 
             Text(art.title)
-                .font(MTheme.heading(26))
+                .font(.custom("Georgia-Bold", size: 26))
 
-            Text("\(art.createdAt.formatted(date: .long, time: .shortened)) • \(art.durationSeconds)s")
-                .font(MTheme.bodyRounded(14))
-                .foregroundStyle(MTheme.ink.opacity(0.75))
+            Text(art.createdAt.formatted(date: .long, time: .shortened))
+                .font(.custom("Georgia", size: 14))
+                .foregroundStyle(.secondary)
+
+            if let lid = art.levelId {
+                Text("Level \(lid)")
+                    .font(.custom("Georgia-BoldItalic", size: 14))
+                    .foregroundColor(Color(hex: "#C8392B"))
+            }
 
             Spacer()
         }
-        .background(MTheme.canvas)
+        .background(Color(hex: "#F0EBE0").ignoresSafeArea())
     }
 }

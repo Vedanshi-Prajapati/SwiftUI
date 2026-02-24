@@ -1,4 +1,3 @@
-
 import SwiftUI
 import UIKit
 
@@ -11,13 +10,12 @@ struct CanvasEngine {
     struct Config {
         var activeTool: Tool = .brush
         var doubleStrokeOn: Bool = false
+        var wavyStroke: Bool = false
         var strokeColor: UIColor = .black
         var strokeWidth: CGFloat = 3.2
         var doubleStrokeOffset: CGFloat = 4.0
-
         var stabilizerOn: Bool = true
         var symmetryOn: Bool = true
-
         var gapTolerance: Int = 3
         var boundaryIncludesTemplate: Bool = true
         var fillBelowInk: Bool = true
@@ -50,7 +48,6 @@ struct CanvasEngine {
         let img = render(size: canvasSize) { ctx in
             UIColor.clear.setFill()
             ctx.fill(CGRect(origin: .zero, size: canvasSize))
-
             let rect = aspectFitRect(imageSize: template.size, in: CGRect(origin: .zero, size: canvasSize)).insetBy(dx: 24, dy: 24)
             template.draw(in: rect, blendMode: .normal, alpha: 0.55)
         }
@@ -100,10 +97,15 @@ struct CanvasEngine {
 
         let pts = processed(points: points, canvasSize: canvasSize)
 
-        if config.doubleStrokeOn {
-            inkLayer = drawDoubleStroke(on: inkLayer, points: pts, size: canvasSize)
-        } else {
+        switch (config.doubleStrokeOn, config.wavyStroke) {
+        case (false, false):
             inkLayer = drawSingleStroke(on: inkLayer, points: pts, size: canvasSize)
+        case (false, true):
+            inkLayer = drawSingleWavyStroke(on: inkLayer, points: pts, size: canvasSize)
+        case (true, false):
+            inkLayer = drawDoubleStroke(on: inkLayer, points: pts, size: canvasSize)
+        case (true, true):
+            inkLayer = drawDoubleWavyStroke(on: inkLayer, points: pts, size: canvasSize)
         }
     }
 
@@ -125,17 +127,40 @@ struct CanvasEngine {
         return pts
     }
 
+    // MARK: - Fill
+
     mutating func fill(at point: CGPoint, canvasSize: CGSize) {
         pushUndoSnapshot()
 
         guard let boundary = makeBoundaryBitmap(canvasSize: canvasSize) else { return }
-        guard let mask = floodFillMask(boundary: boundary, seed: point, size: canvasSize, gapTolerance: config.gapTolerance) else { return }
 
-        let patternTile = makePatternTile(kind: config.pattern, color: config.strokeColor.withAlphaComponent(0.8))
-        let filled = applyMaskFill(mask: mask, tile: patternTile, size: canvasSize)
+        let scale = boundary.scale
+        let bitmapPixelWidth  = boundary.size.width  * scale
+        let bitmapPixelHeight = boundary.size.height * scale
+        let scaledSeed = CGPoint(
+            x: point.x * bitmapPixelWidth  / max(canvasSize.width,  1),
+            y: point.y * bitmapPixelHeight / max(canvasSize.height, 1)
+        )
+
+        guard let mask = floodFillMask(
+            boundary: boundary,
+            scaledSeed: scaledSeed,
+            canvasSize: canvasSize,
+            gapTolerance: config.gapTolerance
+        ) else { return }
+
+        let filled: UIImage
+        if config.activeTool == .bucket {
+            filled = applySolidFill(mask: mask, color: config.strokeColor.withAlphaComponent(0.88), size: canvasSize)
+        } else {
+            let tile = makePatternTile(kind: config.pattern, color: config.strokeColor.withAlphaComponent(0.8))
+            filled = applyMaskFill(mask: mask, tile: tile, size: canvasSize)
+        }
 
         fillLayer = merge(over: fillLayer, add: filled)
     }
+
+    // MARK: - Stroke drawing helpers
 
     private func drawSingleStroke(on base: UIImage?, points: [CGPoint], size: CGSize) -> UIImage? {
         render(size: size) { ctx in
@@ -151,13 +176,27 @@ struct CanvasEngine {
         }
     }
 
+    private func drawSingleWavyStroke(on base: UIImage?, points: [CGPoint], size: CGSize) -> UIImage? {
+        let wavy = applyWave(to: points)
+        return render(size: size) { ctx in
+            base?.draw(in: CGRect(origin: .zero, size: size))
+            ctx.setStrokeColor(config.strokeColor.cgColor)
+            ctx.setLineWidth(config.strokeWidth)
+            ctx.setLineCap(.round)
+            ctx.setLineJoin(.round)
+            ctx.beginPath()
+            ctx.move(to: wavy[0])
+            for p in wavy.dropFirst() { ctx.addLine(to: p) }
+            ctx.strokePath()
+        }
+    }
+
     private func drawDoubleStroke(on base: UIImage?, points: [CGPoint], size: CGSize) -> UIImage? {
         let offset = config.doubleStrokeOffset
         let (left, right) = offsetPolylines(points: points, offset: offset)
 
         return render(size: size) { ctx in
             base?.draw(in: CGRect(origin: .zero, size: size))
-
             ctx.setStrokeColor(config.strokeColor.cgColor)
             ctx.setLineWidth(config.strokeWidth)
             ctx.setLineCap(.round)
@@ -176,6 +215,52 @@ struct CanvasEngine {
         }
     }
 
+    private func drawDoubleWavyStroke(on base: UIImage?, points: [CGPoint], size: CGSize) -> UIImage? {
+        let offset = config.doubleStrokeOffset
+        let (left, right) = offsetPolylines(points: points, offset: offset)
+        let wavyLeft  = applyWave(to: left)
+        let wavyRight = applyWave(to: right, phaseShift: .pi)
+
+        return render(size: size) { ctx in
+            base?.draw(in: CGRect(origin: .zero, size: size))
+            ctx.setStrokeColor(config.strokeColor.cgColor)
+            ctx.setLineWidth(config.strokeWidth)
+            ctx.setLineCap(.round)
+            ctx.setLineJoin(.round)
+
+            func stroke(_ pts: [CGPoint]) {
+                guard pts.count >= 2 else { return }
+                ctx.beginPath()
+                ctx.move(to: pts[0])
+                for p in pts.dropFirst() { ctx.addLine(to: p) }
+                ctx.strokePath()
+            }
+
+            stroke(wavyLeft)
+            stroke(wavyRight)
+        }
+    }
+
+    private func applyWave(to points: [CGPoint], amplitude: CGFloat = 3.5, frequency: CGFloat = 0.25, phaseShift: CGFloat = 0) -> [CGPoint] {
+        guard points.count >= 2 else { return points }
+        var result: [CGPoint] = []
+        for (i, p) in points.enumerated() {
+            let t = CGFloat(i) / CGFloat(max(points.count - 1, 1))
+            let prev = points[max(i - 1, 0)]
+            let next = points[min(i + 1, points.count - 1)]
+            let dx = next.x - prev.x
+            let dy = next.y - prev.y
+            let len = max(sqrt(dx * dx + dy * dy), 0.001)
+            let nx = -dy / len
+            let ny =  dx / len
+            let wave = amplitude * sin(t * .pi * 2 * frequency * CGFloat(points.count) + phaseShift)
+            result.append(CGPoint(x: p.x + nx * wave, y: p.y + ny * wave))
+        }
+        return result
+    }
+
+    // MARK: - Flood fill internals
+
     private func makeBoundaryBitmap(canvasSize: CGSize) -> UIImage? {
         guard let ink = inkLayer else { return nil }
         return render(size: canvasSize) { ctx in
@@ -189,7 +274,7 @@ struct CanvasEngine {
         }
     }
 
-    private func floodFillMask(boundary: UIImage, seed: CGPoint, size: CGSize, gapTolerance: Int) -> UIImage? {
+    private func floodFillMask(boundary: UIImage, scaledSeed: CGPoint, canvasSize: CGSize, gapTolerance: Int) -> UIImage? {
         guard let cg = boundary.cgImage else { return nil }
 
         let w = cg.width
@@ -200,19 +285,15 @@ struct CanvasEngine {
         let ptr = CFDataGetBytePtr(data)!
         let bpr = cg.bytesPerRow
 
-        let sx = min(max(Int(seed.x * CGFloat(w) / max(size.width, 1)), 0), w - 1)
-        let sy = min(max(Int(seed.y * CGFloat(h) / max(size.height, 1)), 0), h - 1)
+        let sx = min(max(Int(scaledSeed.x), 0), w - 1)
+        let sy = min(max(Int(scaledSeed.y), 0), h - 1)
 
-        
         func isBoundary(_ x: Int, _ y: Int) -> Bool {
             if x < 0 || y < 0 || x >= w || y >= h { return true }
-
             let idx = y * bpr + x * 4
             let b = Int(ptr[idx + 0])
             let g = Int(ptr[idx + 1])
             let r = Int(ptr[idx + 2])
-
-            
             return (r + g + b) < 240 * 3
         }
 
@@ -220,8 +301,8 @@ struct CanvasEngine {
             return nil
         }
 
-        var mask = [UInt8](repeating: 0, count: w * h)
-        var visited = [UInt8](repeating: 0, count: w * h)
+        var mask    = [UInt8](repeating: 0,   count: w * h)
+        var visited = [UInt8](repeating: 0,   count: w * h)
 
         @inline(__always) func index(_ x: Int, _ y: Int) -> Int { y * w + x }
 
@@ -236,14 +317,11 @@ struct CanvasEngine {
             let v = queue[head]; head += 1
             let x = v % w
             let y = v / w
-            if isBoundaryWithTolerance(isBoundary: isBoundary, x: x, y: y, w: w, h: h, tol: gapTolerance) {
-                continue
-            }
+            if isBoundaryWithTolerance(isBoundary: isBoundary, x: x, y: y, w: w, h: h, tol: gapTolerance) { continue }
 
             mask[v] = 255
 
-            let neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-            for (nx, ny) in neighbors {
+            for (nx, ny) in [(x+1,y),(x-1,y),(x,y+1),(x,y-1)] {
                 if nx < 0 || ny < 0 || nx >= w || ny >= h { continue }
                 let ni = index(nx, ny)
                 if visited[ni] == 1 { continue }
@@ -257,20 +335,12 @@ struct CanvasEngine {
 
     private func isBoundaryWithTolerance(
         isBoundary: (Int, Int) -> Bool,
-        x: Int,
-        y: Int,
-        w: Int,
-        h: Int,
-        tol: Int
+        x: Int, y: Int, w: Int, h: Int, tol: Int
     ) -> Bool {
         if isBoundary(x, y) { return true }
         if tol <= 0 { return false }
-
-        let x0 = max(0, x - tol)
-        let x1 = min(w - 1, x + tol)
-        let y0 = max(0, y - tol)
-        let y1 = min(h - 1, y + tol)
-
+        let x0 = max(0, x - tol), x1 = min(w - 1, x + tol)
+        let y0 = max(0, y - tol), y1 = min(h - 1, y + tol)
         for yy in y0...y1 {
             for xx in x0...x1 {
                 if isBoundary(xx, yy) { return true }
@@ -279,6 +349,20 @@ struct CanvasEngine {
         return false
     }
 
+    // MARK: - Fill renderers
+
+    private func applySolidFill(mask: UIImage, color: UIColor, size: CGSize) -> UIImage {
+        render(size: size) { ctx in
+            UIColor.clear.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+            guard let cgMask = mask.cgImage else { return }
+            ctx.saveGState()
+            ctx.clip(to: CGRect(origin: .zero, size: size), mask: cgMask)
+            ctx.setFillColor(color.cgColor)
+            ctx.fill(CGRect(origin: .zero, size: size))
+            ctx.restoreGState()
+        }
+    }
 
     private func makePatternTile(kind: PatternKind, color: UIColor) -> UIImage {
         let tileSize = CGSize(width: 24, height: 24)
@@ -308,7 +392,6 @@ struct CanvasEngine {
                     ctx.move(to: CGPoint(x: x, y: 0))
                     ctx.addLine(to: CGPoint(x: x + 24, y: 24))
                     ctx.strokePath()
-
                     ctx.move(to: CGPoint(x: x, y: 24))
                     ctx.addLine(to: CGPoint(x: x + 24, y: 0))
                     ctx.strokePath()
@@ -321,7 +404,6 @@ struct CanvasEngine {
         let tiled = render(size: size) { ctx in
             UIColor.clear.setFill()
             ctx.fill(CGRect(origin: .zero, size: size))
-
             let tileRect = CGRect(origin: .zero, size: tile.size)
             for y in stride(from: 0 as CGFloat, to: size.height, by: tile.size.height) {
                 for x in stride(from: 0 as CGFloat, to: size.width, by: tile.size.width) {
@@ -333,7 +415,6 @@ struct CanvasEngine {
         return render(size: size) { ctx in
             UIColor.clear.setFill()
             ctx.fill(CGRect(origin: .zero, size: size))
-
             guard let cgMask = mask.cgImage else { return }
             ctx.saveGState()
             ctx.clip(to: CGRect(origin: .zero, size: size), mask: cgMask)
@@ -352,9 +433,8 @@ struct CanvasEngine {
 
     private func blankImage(size: CGSize, transparent: Bool = false) -> UIImage {
         render(size: size) { ctx in
-            let rect = CGRect(origin: .zero, size: size)
             UIColor.clear.setFill()
-            ctx.fill(rect)
+            ctx.fill(CGRect(origin: .zero, size: size))
         }
     }
 
@@ -363,9 +443,7 @@ struct CanvasEngine {
         format.scale = UITraitCollection.current.displayScale
         format.opaque = false
         let r = UIGraphicsImageRenderer(size: size, format: format)
-        return r.image { ctx in
-            draw(ctx.cgContext)
-        }
+        return r.image { ctx in draw(ctx.cgContext) }
     }
 
     private func aspectFitRect(imageSize: CGSize, in bounds: CGRect) -> CGRect {
@@ -387,9 +465,7 @@ struct CanvasEngine {
         var out = [points[0]]
         var prev = points[0]
         for p in points.dropFirst() {
-            let nx = prev.x + alpha * (p.x - prev.x)
-            let ny = prev.y + alpha * (p.y - prev.y)
-            let np = CGPoint(x: nx, y: ny)
+            let np = CGPoint(x: prev.x + alpha * (p.x - prev.x), y: prev.y + alpha * (p.y - prev.y))
             out.append(np)
             prev = np
         }
@@ -398,18 +474,14 @@ struct CanvasEngine {
 
     private func offsetPolylines(points: [CGPoint], offset: CGFloat) -> ([CGPoint],[CGPoint]) {
         guard points.count >= 2 else { return (points, points) }
-        var left: [CGPoint] = []
-        var right: [CGPoint] = []
-
+        var left: [CGPoint] = [], right: [CGPoint] = []
         for i in 0..<points.count {
             let p = points[i]
             let prev = points[max(i-1, 0)]
             let next = points[min(i+1, points.count-1)]
-            let dx = next.x - prev.x
-            let dy = next.y - prev.y
+            let dx = next.x - prev.x, dy = next.y - prev.y
             let len = max(sqrt(dx*dx + dy*dy), 0.001)
-            let nx = -dy / len
-            let ny = dx / len
+            let nx = -dy / len, ny = dx / len
             left.append(CGPoint(x: p.x + nx * offset, y: p.y + ny * offset))
             right.append(CGPoint(x: p.x - nx * offset, y: p.y - ny * offset))
         }
@@ -418,20 +490,15 @@ struct CanvasEngine {
 
     private func makeMaskImage(bytes: [UInt8], width: Int, height: Int) -> UIImage? {
         let colorSpace = CGColorSpaceCreateDeviceGray()
-        let bpr = width
         guard let provider = CGDataProvider(data: Data(bytes) as CFData) else { return nil }
         guard let cg = CGImage(
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bitsPerPixel: 8,
-            bytesPerRow: bpr,
+            width: width, height: height,
+            bitsPerComponent: 8, bitsPerPixel: 8,
+            bytesPerRow: width,
             space: colorSpace,
             bitmapInfo: CGBitmapInfo(rawValue: 0),
             provider: provider,
-            decode: nil,
-            shouldInterpolate: false,
-            intent: .defaultIntent
+            decode: nil, shouldInterpolate: false, intent: .defaultIntent
         ) else { return nil }
         return UIImage(cgImage: cg, scale: UITraitCollection.current.displayScale, orientation: .up)
     }

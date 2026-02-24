@@ -1,283 +1,463 @@
 import SwiftUI
-
-enum Tool: String {
-    case brush
-    case bucket
-    case pattern
-}
+import UIKit
 
 struct LevelDrawView: View {
     @EnvironmentObject private var app: AppState
+    @Environment(\.dismiss) private var dismiss
+
     let level: Level
 
     @State private var engine = CanvasEngine()
     @State private var tool: Tool = .brush
-    @State private var isDoubleStroke = false
-
-    @State private var showPalette = false
-    @State private var showPatterns = false
-
+    @State private var brushStroke: BrushStroke = .single
+    @State private var fillPattern: FillPattern = .dots
     @State private var assistOn = true
     @State private var symmetryOn = true
-
+    @State private var selectedTab: LevelDrawTab = .draw
+    @State private var templateExpanded = false
     @State private var startTime = Date()
     @State private var navigateCelebrate = false
+    @State private var completedArtwork: Artwork? = nil
+    @State private var completePressed = false
+    @State private var backPressed = false
+
+    private var canUndo: Bool { engine.canUndo }
+    private var canRedo: Bool { engine.canRedo }
 
     private let palettes: [MadhubaniPalette] = [
-        .init(name: "Classic", colors: [MTheme.ink.uiColor, MTheme.terracotta.uiColor, MTheme.mustard.uiColor, MTheme.leaf.uiColor, MTheme.rose.uiColor]),
-        .init(name: "Earth", colors: [MTheme.ink.uiColor, UIColor(red: 0.52, green: 0.28, blue: 0.18, alpha: 1), UIColor(red: 0.85, green: 0.75, blue: 0.45, alpha: 1), UIColor(red: 0.22, green: 0.35, blue: 0.20, alpha: 1)])
+        .init(
+            name: "Classic",
+            colors: [
+                UIColor(MTheme.ink),
+                UIColor(MTheme.terracotta),
+                UIColor(MTheme.mustard),
+                UIColor(MTheme.leaf),
+                UIColor(MTheme.rose)
+            ]
+        ),
+        .init(
+            name: "Earth",
+            colors: [
+                UIColor(MTheme.ink),
+                UIColor(red: 0.52, green: 0.28, blue: 0.18, alpha: 1),
+                UIColor(red: 0.85, green: 0.75, blue: 0.45, alpha: 1),
+                UIColor(red: 0.22, green: 0.35, blue: 0.20, alpha: 1)
+            ]
+        )
     ]
 
     var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text(level.title)
-                    .font(MTheme.heading(26))
-                Spacer()
-                Button {
-                    let dur = Int(Date().timeIntervalSince(startTime))
-                    let pngName = "\(UUID().uuidString).png"
-                    let art = Artwork(
-                        id: UUID(),
-                        title: level.title,
-                        createdAt: Date(),
-                        durationSeconds: dur,
-                        source: .level,
-                        levelId: level.id,
-                        pngFilename: pngName
+        ZStack {
+            MTheme.canvas.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                topBar
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+
+                canvasArea
+                    .frame(maxHeight: .infinity)
+
+                bottomArea
+            }
+
+            if templateExpanded {
+                templateOverlay
+            }
+        }
+        .navigationBarHidden(true)
+        .onAppear {
+            startTime = Date()
+            configureEngine()
+        }
+        .onChange(of: tool) { _, newValue in
+            engine.config.activeTool = newValue
+        }
+        .onChange(of: brushStroke) {
+            applyBrushStroke()
+        }
+        .onChange(of: assistOn) { _, newValue in
+            engine.config.stabilizerOn = newValue
+        }
+        .onChange(of: symmetryOn) { _, newValue in
+            engine.config.symmetryOn = newValue
+        }
+        .onChange(of: fillPattern) { _, newValue in
+            switch newValue {
+            case .dots:       engine.config.pattern = .dots
+            case .stripes:    engine.config.pattern = .stripes
+            case .crosshatch: engine.config.pattern = .crosshatch
+            default:          engine.config.pattern = .dots
+            }
+        }
+        .navigationDestination(isPresented: $navigateCelebrate) {
+            if let completedArtwork {
+                CelebrateView(level: level, artwork: completedArtwork)
+            } else {
+                CelebrateView(level: level, artwork: Artwork(id: UUID(), title: level.title, createdAt: Date(), durationSeconds: 0, source: .level, levelId: level.id, pngFilename: ""))
+            }
+        }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            DrawPressableButton(isPressed: $backPressed, action: {
+                dismiss()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Back")
+                        .font(MTheme.font(.sfPro, size: 15, weight: .medium))
+                }
+                .foregroundColor(MTheme.ink)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(MTheme.paper)
+                        .shadow(color: MTheme.ink.opacity(0.1), radius: 4, x: 0, y: 2)
+                        .overlay(Capsule().strokeBorder(MTheme.border.opacity(0.5), lineWidth: 1))
+                )
+                .scaleEffect(backPressed ? 0.94 : 1.0)
+            }
+
+            Spacer()
+
+            templateThumbnail
+
+            Spacer()
+
+            DrawPressableButton(isPressed: $completePressed, action: {
+                let dur = Int(Date().timeIntervalSince(startTime))
+                let pngName = "\(UUID().uuidString).png"
+                let art = Artwork(
+                    id: UUID(),
+                    title: level.title,
+                    createdAt: Date(),
+                    durationSeconds: dur,
+                    source: .level,
+                    levelId: level.id,
+                    pngFilename: pngName
+                )
+                if let img = engine.renderedCompositeUIImage() {
+                    app.addArtwork(art, image: img)
+                    completedArtwork = art
+                    navigateCelebrate = true
+                }
+            }) {
+                HStack(spacing: 6) {
+                    Text("Complete")
+                        .font(MTheme.font(.sfPro, size: 15, weight: .semibold))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundColor(MTheme.paper)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(MTheme.accent)
+                        .shadow(color: MTheme.accent.opacity(0.35), radius: 6, x: 0, y: 3)
+                )
+                .scaleEffect(completePressed ? 0.94 : 1.0)
+            }
+        }
+    }
+
+    private var templateThumbnail: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.72)) {
+                templateExpanded = true
+            }
+        } label: {
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(MTheme.paper)
+                    .frame(width: 48, height: 48)
+                    .shadow(color: MTheme.ink.opacity(0.12), radius: 4, x: 0, y: 2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(MTheme.border, lineWidth: 1)
                     )
 
-                    if let img = engine.renderedCompositeUIImage() {
-                        app.addArtwork(art, image: img)
-                        navigateCelebrate = true
+                Image(level.templatePNG)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(6)
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundColor(MTheme.ink.opacity(0.4))
+                    .padding(4)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("View template")
+    }
+
+    private var templateOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                        templateExpanded = false
+                    }
+                }
+
+            VStack(spacing: 16) {
+                Image(level.templatePNG)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 300, maxHeight: 300)
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(MTheme.paper)
+                            .shadow(color: MTheme.ink.opacity(0.25), radius: 24, x: 0, y: 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22)
+                                    .strokeBorder(MTheme.border, lineWidth: 1)
+                            )
+                    )
+
+                Text(level.title)
+                    .font(MTheme.font(.sourceSerif, size: 15, weight: .semibold))
+                    .foregroundColor(MTheme.paper.opacity(0.85))
+
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                        templateExpanded = false
                     }
                 } label: {
-                    Text("Finish")
-                        .font(MTheme.bodyRounded(15, weight: .semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(MTheme.paper)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(MTheme.ink)
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(MTheme.paper))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .transition(.scale(scale: 0.88).combined(with: .opacity))
+        }
+    }
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 22).fill(MTheme.paper)
-                    .padding(.horizontal, 12)
+    private var canvasArea: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(MTheme.paper)
+                .padding(.horizontal, 16)
+                .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
 
+            GeometryReader { geo in
+                let side = min(geo.size.width - 32, geo.size.height)
                 CanvasView(engine: $engine)
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
-                    .padding(.horizontal, 12)
-                    .overlay {
+                    .frame(width: side, height: side)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .overlay(
                         Image(level.templatePNG)
                             .resizable()
                             .scaledToFit()
-                            .padding(.horizontal, 28)
-                            .opacity(0.16) // template faint
+                            .opacity(0.14)
                             .allowsHitTesting(false)
-                    }
+                            .padding(8)
+                    )
+                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
             }
-            .frame(maxHeight: .infinity)
-            .overlay(BorderOverlay())
+            .padding(.horizontal, 16)
+        }
+    }
 
-            .safeAreaInset(edge: .bottom) {
-                ToolBar(
-                    tools: [
-                        .init(tool: .brush, icon: "paintbrush.pointed", label: "Brush"),
-                        .init(tool: .bucket, icon: "paintbrush", label: "Bucket"),
-                        .init(tool: .palette, icon: "paintpalette", label: "Palette"),
-                        .init(tool: .resize, icon: "arrow.up.left.and.arrow.down.right", label: "Resize"),
-                        .init(tool: .chevron, icon: "chevron.up", label: "Tools")
-                    ],
-                    onTap: { tool in
-                        print(tool) // connect this to CanvasEngine
+    private var bottomArea: some View {
+        VStack(spacing: 0) {
+            FloatingToolbar(
+                activeTool: Binding(
+                    get: {
+                        switch tool {
+                        case .brush:   return DrawTool.brush
+                        case .bucket:  return DrawTool.bucket
+                        case .pattern: return DrawTool.pattern
+                        }
+                    },
+                    set: { dt in
+                        switch dt {
+                        case .brush:   tool = .brush
+                        case .bucket:  tool = .bucket
+                        case .pattern: tool = .pattern
+                        }
+                    }
+                ),
+                brushStroke: $brushStroke,
+                fillPattern: $fillPattern,
+                canUndo: Binding(get: { canUndo }, set: { _ in }),
+                canRedo: Binding(get: { canRedo }, set: { _ in }),
+                onUndo: { engine.undo() },
+                onRedo: { engine.redo() },
+                selectedColor: Binding<Color>(
+                    get: {
+                        Color(engine.config.strokeColor)
+                    },
+                    set: { newColor in
+                        // Update engine stroke color when toolbar color changes
+                        #if canImport(UIKit)
+                        engine.config.strokeColor = UIColor(newColor)
+                        #endif
                     }
                 )
-            }
+            )
+            .padding(.top, 12)
+            .padding(.horizontal, 16)
 
-            .padding(.horizontal, 12)
-            .padding(.bottom, 10)
+            drawTabBar
+                .padding(.top, 10)
+                .padding(.bottom, 20)
         }
-        .background(MTheme.canvas)
-        .onAppear {
-            startTime = Date()
-            engine.config.gapTolerance = 3
-            engine.config.boundaryIncludesTemplate = true
-            engine.config.fillBelowInk = true
-
-            engine.config.stabilizerOn = assistOn
-            engine.config.symmetryOn = symmetryOn
-            engine.config.doubleStrokeOn = isDoubleStroke
-            engine.config.activeTool = tool
-            engine.config.strokeColor = MTheme.ink.uiColor
-            engine.config.pattern = .dots
-        }
-        .onChange(of: tool) { engine.config.activeTool = tool }
-        .onChange(of: isDoubleStroke) { engine.config.doubleStrokeOn = isDoubleStroke }
-        .onChange(of: assistOn) { engine.config.stabilizerOn = assistOn }
-        .onChange(of: symmetryOn) { engine.config.symmetryOn = symmetryOn }
-        .sheet(isPresented: $showPalette) {
-            PaletteSheet(palettes: palettes) { picked in
-                engine.config.strokeColor = picked
-                showPalette = false
-            }
-            .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $showPatterns) {
-            PatternSheet(selected: engine.config.pattern) { pat in
-                engine.config.pattern = pat
-                showPatterns = false
-            }
-            .presentationDetents([.medium])
-        }
-        .navigationDestination(isPresented: $navigateCelebrate) {
-            CelebrateView(level: level)
-        }
-    }
-}
-
-struct ToolRow: View {
-    @Binding var tool: Tool
-    @Binding var isDoubleStroke: Bool
-    @Binding var showPalette: Bool
-    @Binding var showPatterns: Bool
-    @Binding var assistOn: Bool
-    @Binding var symmetryOn: Bool
-
-    let canUndo: Bool
-    let canRedo: Bool
-    let onUndo: () -> Void
-    let onRedo: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            toolButton("Brush", system: "pencil", selected: tool == .brush) { tool = .brush }
-            toolButton("Bucket", system: "paint.bucket.classic", selected: tool == .bucket) { tool = .bucket }
-            toolButton("Pattern", system: "square.grid.3x3.fill", selected: tool == .pattern) { tool = .pattern }
-
-            Button { showPalette = true } label: {
-                Image(systemName: "paintpalette")
-                    .frame(width: 44, height: 44)
-                    .background(MTheme.paper)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-
-            Button { showPatterns = true } label: {
-                Image(systemName: "circle.grid.2x1")
-                    .frame(width: 44, height: 44)
-                    .background(MTheme.paper)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-
-            Spacer()
-
-            Toggle(isOn: $assistOn) { Image(systemName: "waveform.path") }
-                .labelsHidden()
-                .toggleStyle(.switch)
-
-            Toggle(isOn: $symmetryOn) { Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right") }
-                .labelsHidden()
-                .toggleStyle(.switch)
-
-            Button(action: onUndo) {
-                Image(systemName: "arrow.uturn.backward")
-            }
-            .disabled(!canUndo)
-
-            Button(action: onRedo) {
-                Image(systemName: "arrow.uturn.forward")
-            }
-            .disabled(!canRedo)
-
-            Button {
-                isDoubleStroke.toggle()
-            } label: {
-                Text("2x")
-                    .font(MTheme.bodyRounded(14, weight: .semibold))
-                    .frame(width: 44, height: 44)
-                    .background(isDoubleStroke ? MTheme.terracotta.opacity(0.18) : MTheme.paper)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-        }
-        .foregroundStyle(MTheme.ink)
-        .font(MTheme.bodyRounded(14))
+        .background(
+            UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24)
+                .fill(MTheme.canvas)
+                .shadow(color: MTheme.ink.opacity(0.07), radius: 10, x: 0, y: -3)
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 
-    private func toolButton(_ title: String, system: String, selected: Bool, action: @escaping ()->Void) -> some View {
-        Button(action: action) {
-            Image(systemName: system)
-                .frame(width: 44, height: 44)
-                .background(selected ? MTheme.terracotta.opacity(0.18) : MTheme.paper)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .accessibilityLabel(title)
-    }
-}
-
-struct PaletteSheet: View {
-    let palettes: [MadhubaniPalette]
-    let onPick: (UIColor) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Palette").font(MTheme.heading(22))
-            ForEach(palettes) { pal in
-                Text(pal.name).font(MTheme.bodyRounded(14, weight: .semibold))
-                HStack {
-                    ForEach(pal.colors.indices, id: \.self) { i in
-                        let c = pal.colors[i]
-                        Button {
-                            onPick(c)
-                        } label: {
-                            Circle()
-                                .fill(Color(uiColor: c))
-                                .frame(width: 34, height: 34)
-                                .overlay(Circle().stroke(MTheme.ink.opacity(0.15), lineWidth: 1))
-                        }
+    private var drawTabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(LevelDrawTab.allCases, id: \.self) { tab in
+                LevelDrawTabButton(tab: tab, isSelected: selectedTab == tab) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        selectedTab = tab
+                        applyTab(tab)
                     }
                 }
             }
-            Spacer()
         }
-        .padding(16)
-        .background(MTheme.canvas)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(MTheme.paper)
+                .overlay(Capsule().strokeBorder(MTheme.border.opacity(0.4), lineWidth: 1))
+                .padding(.horizontal, 20)
+        )
+    }
+
+    private func applyTab(_ tab: LevelDrawTab) {
+        switch tab {
+        case .draw:
+            assistOn = false
+            symmetryOn = false
+        case .assist:
+            assistOn = true
+            symmetryOn = true
+        }
+    }
+
+    private func applyBrushStroke() {
+        switch brushStroke {
+        case .single:
+            engine.config.doubleStrokeOn = false
+            engine.config.wavyStroke = false
+        case .double_:
+            engine.config.doubleStrokeOn = true
+            engine.config.wavyStroke = false
+        case .singleWavy:
+            engine.config.doubleStrokeOn = false
+            engine.config.wavyStroke = true
+        case .doubleWavy:
+            engine.config.doubleStrokeOn = true
+            engine.config.wavyStroke = true
+        }
+    }
+
+    private func configureEngine() {
+        engine.config.gapTolerance = 3
+        engine.config.boundaryIncludesTemplate = true
+        engine.config.fillBelowInk = true
+        engine.config.stabilizerOn = assistOn
+        engine.config.symmetryOn = symmetryOn
+        engine.config.doubleStrokeOn = false
+        engine.config.wavyStroke = false
+        engine.config.activeTool = tool
+        engine.config.strokeColor = UIColor(MTheme.ink)
+        engine.config.pattern = .dots
     }
 }
 
-struct PatternSheet: View {
-    let selected: CanvasEngine.PatternKind
-    let onPick: (CanvasEngine.PatternKind) -> Void
+enum LevelDrawTab: CaseIterable {
+    case draw, assist
+
+    var label: String {
+        switch self {
+        case .draw:   return "Draw"
+        case .assist: return "Assist"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .draw:   return "hand.draw"
+        case .assist: return "sparkles"
+        }
+    }
+}
+
+struct LevelDrawTabButton: View {
+    let tab: LevelDrawTab
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var pressed = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Patterns").font(MTheme.heading(22))
-            HStack(spacing: 10) {
-                forButton(.dots)
-                forButton(.stripes)
-                forButton(.crosshatch)
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(MTheme.canvas)
-    }
-
-    private func forButton(_ pat: CanvasEngine.PatternKind) -> some View {
         Button {
-            onPick(pat)
+            action()
         } label: {
-            Text(pat.rawValue.capitalized)
-                .font(MTheme.bodyRounded(14, weight: .semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(MTheme.paper)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+            HStack(spacing: 6) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                Text(tab.label)
+                    .font(MTheme.font(.sfPro, size: 13, weight: isSelected ? .semibold : .regular))
+            }
+            .foregroundColor(isSelected ? MTheme.accent : MTheme.ink.opacity(0.45))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(
+                Capsule()
+                    .fill(isSelected ? MTheme.selectedFill : Color.clear)
+                    .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isSelected)
+            )
+            .scaleEffect(pressed ? 0.93 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.65), value: pressed)
         }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in pressed = true }
+                .onEnded { _ in pressed = false }
+        )
     }
 }
 
-extension Color {
-    var uiColor: UIColor { UIColor(self) }
+struct DrawPressableButton<Label: View>: View {
+    @Binding var isPressed: Bool
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+
+    var body: some View {
+        Button {
+            action()
+        } label: {
+            label()
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.94 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.65), value: isPressed)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+    }
 }
+

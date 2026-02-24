@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		ECAAFD602F4E257D00BBD50F /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = ECAAFD5F2F4E257D00BBD50F /* Lottie */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		ECE976E72F348C3100975E8D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,33 +33,6 @@
 		ECE976F02F348C3100975E8D /* artformUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = artformUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EC3F410E2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Info.plist/SourceSerifPro-Black.ttf",
-				"Info.plist/SourceSerifPro-Bold.ttf",
-				"Info.plist/SourceSerifPro-ExtraLight.ttf",
-				"Info.plist/SourceSerifPro-Light.ttf",
-				"Info.plist/SourceSerifPro-Regular.ttf",
-				"Info.plist/SourceSerifPro-SemiBold.ttf",
-			);
-			target = ECE976E52F348C3100975E8D /* artformTests */;
-		};
-		EC3F410F2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformUITests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Info.plist/SourceSerifPro-Black.ttf",
-				"Info.plist/SourceSerifPro-Bold.ttf",
-				"Info.plist/SourceSerifPro-ExtraLight.ttf",
-				"Info.plist/SourceSerifPro-Light.ttf",
-				"Info.plist/SourceSerifPro-Regular.ttf",
-				"Info.plist/SourceSerifPro-SemiBold.ttf",
-			);
-			target = ECE976EF2F348C3100975E8D /* artformUITests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 		EC8D2E842F4321FA00ABA67E /* Exceptions for "artform" folder in "Compile Sources" phase from "artform" target */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
@@ -71,8 +48,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				EC8D2E842F4321FA00ABA67E /* Exceptions for "artform" folder in "Compile Sources" phase from "artform" target */,
-				EC3F410E2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformTests" target */,
-				EC3F410F2F38C1D8006B55F1 /* Exceptions for "artform" folder in "artformUITests" target */,
 			);
 			path = artform;
 			sourceTree = "<group>";
@@ -94,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ECAAFD602F4E257D00BBD50F /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,12 +90,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		ECAAFD5E2F4E257400BBD50F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		ECE976D02F348C2F00975E8D = {
 			isa = PBXGroup;
 			children = (
 				ECE976DB2F348C2F00975E8D /* artform */,
 				ECE976E92F348C3100975E8D /* artformTests */,
 				ECE976F32F348C3100975E8D /* artformUITests */,
+				ECAAFD5E2F4E257400BBD50F /* Frameworks */,
 				ECE976DA2F348C2F00975E8D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -154,6 +138,7 @@
 			);
 			name = artform;
 			packageProductDependencies = (
+				ECAAFD5F2F4E257D00BBD50F /* Lottie */,
 			);
 			productName = artform;
 			productReference = ECE976D92F348C2F00975E8D /* artform.app */;
@@ -238,6 +223,9 @@
 			);
 			mainGroup = ECE976D02F348C2F00975E8D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ECAAFD5D2F4E14C800BBD50F /* XCRemoteSwiftPackageReference "lottie-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ECE976DA2F348C2F00975E8D /* Products */;
 			projectDirPath = "";
@@ -618,6 +606,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		ECAAFD5D2F4E14C800BBD50F /* XCRemoteSwiftPackageReference "lottie-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ECAAFD5F2F4E257D00BBD50F /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECAAFD5D2F4E14C800BBD50F /* XCRemoteSwiftPackageReference "lottie-spm" */;
+			productName = Lottie;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ECE976D12F348C2F00975E8D /* Project object */;
 }

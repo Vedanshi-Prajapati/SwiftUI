@@ -7,7 +7,7 @@ final class CanvasTransform: ObservableObject {
     @Published var offset: CGSize = .zero
 
     let minScale: CGFloat = 0.75
-    let maxScale: CGFloat = 3.0
+    let maxScale: CGFloat = 5.0
 
     private(set) var containerSize: CGSize = .zero
 

@@ -196,10 +196,14 @@ struct DrawScreen: View {
                         .scaledToFit()
                         .frame(width: side, height: side)
                         .opacity(0.12)
+                        .scaleEffect(transform.scale)
+                        .offset(x: transform.offset.width, y: transform.offset.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                    
                     CanvasView(store: store, transform: transform, templateImage: UIImage(named: templateImageName))
                         .frame(width: side, height: side)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 18))
                 .position(x: geo.size.width / 2, y: geo.size.height / 2)
                 .onAppear { transform.setContainerSize(geo.size) }
                 .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
@@ -232,7 +236,7 @@ struct DrawScreen: View {
                 }
 
             Button {
-                let next = min(transform.scale + 0.25, 3.0)
+                let next = min(transform.scale + 0.25, 5.0)
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.applyPinch(newScale: next) }
                 zoomScale = transform.scale
             } label: {

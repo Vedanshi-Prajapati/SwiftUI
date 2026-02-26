@@ -90,6 +90,8 @@ struct FreeDrawView: View {
                         .padding(.horizontal, 12)
 
                     CanvasView(store: store, transform: transform, templateImage: nil)
+                        .scaleEffect(transform.scale)
+                        .offset(x: transform.offset.width, y: transform.offset.height)
                         .clipShape(RoundedRectangle(cornerRadius: 22))
                         .padding(.horizontal, 12)
                         .onAppear { transform.setContainerSize(CGSize(width: 400, height: 400)) }

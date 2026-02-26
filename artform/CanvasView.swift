@@ -29,10 +29,6 @@ struct CanvasView: UIViewRepresentable {
                 self.store.setCanvasSize(size)
             }
         }
-
-        uiView.transform = CGAffineTransform(scaleX: transform.scale, y: transform.scale)
-            .translatedBy(x: transform.offset.width / transform.scale,
-                          y: transform.offset.height / transform.scale)
     }
 
     final class Coordinator: NSObject, CanvasUIViewDelegate {

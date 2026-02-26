@@ -202,6 +202,8 @@ struct DrawScreen: View {
                     
                     CanvasView(store: store, transform: transform, templateImage: UIImage(named: templateImageName))
                         .frame(width: side, height: side)
+                        .scaleEffect(transform.scale)
+                        .offset(x: transform.offset.width, y: transform.offset.height)
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
                 .position(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -370,7 +372,7 @@ struct DrawScreen: View {
 
     private func configureEngine() {
         store.config.gapTolerance = 3
-        store.config.boundaryIncludesTemplate = true
+        store.config.boundaryIncludesTemplate = false
         store.config.fillBelowInk = true
         store.config.stabilizerOn = assistOn
         store.config.symmetryOn = symmetryOn

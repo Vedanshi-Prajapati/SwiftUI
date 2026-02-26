@@ -71,6 +71,14 @@ final class AppState: ObservableObject {
 
     func isLevelUnlocked(_ id: Int) -> Bool { id <= unlockedLevel }
     func isLevelCompleted(_ id: Int) -> Bool { completedLevels.contains(id) }
+
+    func deleteArtwork(_ art: Artwork) {
+        store.deleteArtworkPNG(filename: art.pngFilename)
+        db.deleteArtwork(id: art.id)
+        if let idx = artworks.firstIndex(where: { $0.id == art.id }) {
+            artworks.remove(at: idx)
+        }
+    }
 }
 
 private extension Int {

@@ -55,6 +55,7 @@ struct RootTabs: View {
             }
             .tabItem { Label("Create", systemImage: "pencil.tip") }
         }
+        .tint(Color(hex: "#7A2E24"))
     }
 }
 

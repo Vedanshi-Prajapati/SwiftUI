@@ -190,12 +190,19 @@ struct DrawScreen: View {
                 .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
             GeometryReader { geo in
                 let side = min(geo.size.width - 32, geo.size.height)
-                CanvasView(store: store, transform: transform, templateImage: UIImage(named: templateImageName))
-                    .frame(width: side, height: side)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
-                    .onAppear { transform.setContainerSize(geo.size) }
-                    .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
+                ZStack {
+                    Image(templateImageName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: side, height: side)
+                        .opacity(0.12)
+                    CanvasView(store: store, transform: transform, templateImage: UIImage(named: templateImageName))
+                        .frame(width: side, height: side)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                .onAppear { transform.setContainerSize(geo.size) }
+                .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
             }
             .padding(.horizontal, 16)
         }

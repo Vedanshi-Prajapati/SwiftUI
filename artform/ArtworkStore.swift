@@ -45,4 +45,9 @@ struct ArtworkStore {
         guard let img = UIImage(data: data) else { throw StoreError.badURL }
         return img
     }
+
+    func deleteArtworkPNG(filename: String) {
+        let url = artworksDir.appendingPathComponent(filename)
+        try? FileManager.default.removeItem(at: url)
+    }
 }

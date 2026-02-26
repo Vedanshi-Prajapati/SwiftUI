@@ -32,14 +32,21 @@ struct GalleryView: View {
                                 Text(art.createdAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.custom("Georgia", size: 13))
                                     .foregroundStyle(.secondary)
-
-                                if let lid = art.levelId {
-                                    Text("Level \(lid)")
-                                        .font(.custom("Georgia", size: 12))
-                                        .foregroundColor(Color(hex: "#C8392B"))
-                                }
                             }
                             Spacer()
+                            
+                            Button {
+                                withAnimation {
+                                    app.deleteArtwork(art)
+                                }
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.red.opacity(0.8))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(12)
                         .background(Color(.secondarySystemBackground))
@@ -88,12 +95,6 @@ struct ArtworkDetailView: View {
             Text(art.createdAt.formatted(date: .long, time: .shortened))
                 .font(.custom("Georgia", size: 14))
                 .foregroundStyle(.secondary)
-
-            if let lid = art.levelId {
-                Text("Level \(lid)")
-                    .font(.custom("Georgia-BoldItalic", size: 14))
-                    .foregroundColor(Color(hex: "#C8392B"))
-            }
 
             Spacer()
         }

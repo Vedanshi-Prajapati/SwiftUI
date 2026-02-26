@@ -1,11 +1,11 @@
 import SwiftUI
 
 private let levelColors: [Color] = [
-    Color(hex: "#C8392B"), Color(hex: "#E8A020"), Color(hex: "#2C4F9E"),
+    Color(hex: "#C8392B"), Color(hex: "#E8A020"), Color(hex: "#8A6340"),
     Color(hex: "#2A7A3B"), Color(hex: "#C8392B"), Color(hex: "#7B3FA0"),
-    Color(hex: "#E8A020"), Color(hex: "#2C4F9E"), Color(hex: "#2A7A3B"),
+    Color(hex: "#E8A020"), Color(hex: "#8A6340"), Color(hex: "#2A7A3B"),
     Color(hex: "#C8392B"), Color(hex: "#E8A020"), Color(hex: "#7B3FA0"),
-    Color(hex: "#2A7A3B"), Color(hex: "#2C4F9E"), Color(hex: "#C8392B"),
+    Color(hex: "#2A7A3B"), Color(hex: "#8A6340"), Color(hex: "#C8392B"),
 ]
 
 
@@ -164,10 +164,16 @@ struct JourneyNode: View {
             ZStack {
                 if isCurrent {
                     Circle()
-                        .fill(color.opacity(0.22))
-                        .frame(width: nodeSize + 22, height: nodeSize + 22)
-                        .offset(x: pulse ? -10 : 10)
-                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
+                        .fill(
+                            RadialGradient(
+                                colors: [color.opacity(0.55), color.opacity(0.0)],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: nodeSize * 0.85
+                            )
+                        )
+                        .frame(width: nodeSize + 40, height: nodeSize + 40)
+                        .blur(radius: 8)
                 }
 
                 Circle().fill(Color(hex: "#1A1A1A")).frame(width: nodeSize + 7, height: nodeSize + 7)

@@ -3,7 +3,8 @@ import UIKit
 
 struct FreeDrawView: View {
     @EnvironmentObject private var app: AppState
-    @State private var engine = CanvasEngine()
+    @StateObject private var store     = CanvasStore()
+    @StateObject private var transform = CanvasTransform()
     @State private var tool: Tool = .brush
     @State private var brushStroke: BrushStroke = .single
     @State private var assistOn = true
@@ -17,6 +18,7 @@ struct FreeDrawView: View {
             get: {
                 switch tool {
                 case .brush:   return .brush
+                case .eraser:  return .brush
                 case .bucket:  return .bucket
                 case .pattern: return .pattern
                 }
@@ -33,19 +35,14 @@ struct FreeDrawView: View {
 
     private var fillPatternBinding: Binding<FillPattern> {
         Binding(
-            get: {
-                switch engine.config.pattern {
-                case .dots:       return .dots
-                case .stripes:    return .stripes
-                case .crosshatch: return .crosshatch
-                }
-            },
+            get: { fillPattern },
             set: { newValue in
+                fillPattern = newValue
                 switch newValue {
-                case .dots:           engine.config.pattern = .dots
-                case .stripes:        engine.config.pattern = .stripes
-                case .crosshatch:     engine.config.pattern = .crosshatch
-                case .waves, .checks: engine.config.pattern = .dots
+                case .dots:       store.config.pattern = .dots
+                case .stripes:    store.config.pattern = .stripes
+                case .crosshatch: store.config.pattern = .crosshatch
+                case .waves, .checks: store.config.pattern = .dots
                 }
             }
         )
@@ -72,7 +69,7 @@ struct FreeDrawView: View {
                             levelId: nil,
                             pngFilename: pngName
                         )
-                        if let img = engine.renderedCompositeUIImage() {
+                        if let img = store.renderedComposite() {
                             app.addArtwork(art, image: img)
                         }
                     } label: {
@@ -81,7 +78,7 @@ struct FreeDrawView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(MTheme.paper)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 .padding(.horizontal, 16)
@@ -92,9 +89,10 @@ struct FreeDrawView: View {
                         .fill(MTheme.paper)
                         .padding(.horizontal, 12)
 
-                    CanvasView(engine: $engine)
+                    CanvasView(store: store, transform: transform, templateImage: nil)
                         .clipShape(RoundedRectangle(cornerRadius: 22))
                         .padding(.horizontal, 12)
+                        .onAppear { transform.setContainerSize(CGSize(width: 400, height: 400)) }
                 }
                 .frame(maxHeight: .infinity)
 
@@ -102,10 +100,10 @@ struct FreeDrawView: View {
                     activeTool: activeToolBinding,
                     brushStroke: $brushStroke,
                     fillPattern: fillPatternBinding,
-                    canUndo: .constant(engine.canUndo),
-                    canRedo: .constant(engine.canRedo),
-                    onUndo: { engine.undo() },
-                    onRedo: { engine.redo() },
+                    canUndo: .constant(store.canUndo),
+                    canRedo: .constant(store.canRedo),
+                    onUndo: { store.undo() },
+                    onRedo: { store.redo() },
                     selectedColor: $selectedColor
                 )
                 .padding(.horizontal, 12)
@@ -113,34 +111,34 @@ struct FreeDrawView: View {
             }
             .background(MTheme.canvas)
             .onAppear { configureEngine() }
-            .onChange(of: tool) { engine.config.activeTool = tool }
+            .onChange(of: tool) { store.config.activeTool = tool }
             .onChange(of: brushStroke) { applyBrushStroke() }
-            .onChange(of: assistOn) { engine.config.stabilizerOn = assistOn }
-            .onChange(of: symmetryOn) { engine.config.symmetryOn = symmetryOn }
-            .onChange(of: selectedColor) { engine.config.strokeColor = UIColor(selectedColor) }
+            .onChange(of: assistOn) { store.config.stabilizerOn = assistOn }
+            .onChange(of: symmetryOn) { store.config.symmetryOn = symmetryOn }
+            .onChange(of: selectedColor) { store.config.strokeColor = UIColor(selectedColor) }
         }
     }
 
     private func configureEngine() {
         startTime = Date()
-        engine.config.gapTolerance = 3
-        engine.config.boundaryIncludesTemplate = false
-        engine.config.fillBelowInk = true
-        engine.config.stabilizerOn = assistOn
-        engine.config.symmetryOn = symmetryOn
-        engine.config.doubleStrokeOn = false
-        engine.config.wavyStroke = false
-        engine.config.activeTool = tool
-        engine.config.strokeColor = UIColor(selectedColor)
-        engine.config.pattern = .dots
+        store.config.gapTolerance = 3
+        store.config.boundaryIncludesTemplate = false
+        store.config.fillBelowInk = true
+        store.config.stabilizerOn = assistOn
+        store.config.symmetryOn = symmetryOn
+        store.config.doubleStrokeOn = false
+        store.config.wavyStroke = false
+        store.config.activeTool = tool
+        store.config.strokeColor = UIColor(selectedColor)
+        store.config.pattern = .dots
     }
 
     private func applyBrushStroke() {
         switch brushStroke {
-        case .single:     engine.config.doubleStrokeOn = false; engine.config.wavyStroke = false
-        case .double_:    engine.config.doubleStrokeOn = true;  engine.config.wavyStroke = false
-        case .singleWavy: engine.config.doubleStrokeOn = false; engine.config.wavyStroke = true
-        case .doubleWavy: engine.config.doubleStrokeOn = true;  engine.config.wavyStroke = true
+        case .single:     store.config.doubleStrokeOn = false; store.config.wavyStroke = false
+        case .double_:    store.config.doubleStrokeOn = true;  store.config.wavyStroke = false
+        case .singleWavy: store.config.doubleStrokeOn = false; store.config.wavyStroke = true
+        case .doubleWavy: store.config.doubleStrokeOn = true;  store.config.wavyStroke = true
         }
     }
 }

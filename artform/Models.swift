@@ -12,7 +12,6 @@ struct Level: Identifiable, Codable, Hashable {
     let microTeach: String
 }
 
-
 enum ArtworkSource: String, Codable, Hashable {
     case level
     case freeDraw
@@ -27,7 +26,6 @@ struct Artwork: Identifiable, Codable, Hashable {
     let levelId: Int?
     let pngFilename: String
 }
-
 
 struct MadhubaniPalette: Identifiable {
     let id = UUID()

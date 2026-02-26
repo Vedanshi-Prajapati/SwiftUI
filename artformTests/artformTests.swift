@@ -5,7 +5,7 @@ import Testing
 struct artformTests {
 
     @Test func example() async throws {
-        
+
     }
 
 }

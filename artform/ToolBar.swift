@@ -60,61 +60,64 @@ struct FloatingToolbar: View {
     private let menuTransition = AnyTransition.scale(scale: 0.85, anchor: .bottom).combined(with: .opacity)
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            if openMenu == .brush {
-                VerticalMenu(
-                    items: BrushStroke.allCases.map {
-                        MenuItem(id: $0.rawValue, label: $0.label, icon: $0.icon, isSelected: brushStroke == $0)
-                    },
-                    onSelect: { id in
-                        if let s = BrushStroke.allCases.first(where: { $0.rawValue == id }) {
-                            brushStroke = s
-                            activeTool = .brush
-                        }
-                        openMenu = nil
-                    },
-                    onDismiss: { openMenu = nil }
-                )
-                .offset(x: 0, y: -toolbarHeight)
-                .transition(menuTransition)
-            }
-
-            if openMenu == .pattern {
-                VerticalMenu(
-                    items: FillPattern.allCases.map {
-                        MenuItem(id: $0.rawValue, label: $0.label, icon: $0.icon, isSelected: fillPattern == $0)
-                    },
-                    onSelect: { id in
-                        if let p = FillPattern.allCases.first(where: { $0.rawValue == id }) {
-                            fillPattern = p
-                            activeTool = .pattern
-                        }
-                        openMenu = nil
-                    },
-                    onDismiss: { openMenu = nil }
-                )
-                .offset(x: 88, y: -toolbarHeight)
-                .transition(menuTransition)
-            }
-
-            if openMenu == .palette {
-                PalettePanel(
-                    selectedColor: $selectedColor,
-                    selectedTheme: $selectedTheme,
-                    onDismiss: { openMenu = nil }
-                )
-                .offset(x: 0, y: -toolbarHeight)
-                .transition(menuTransition)
-            }
-
+        Group {
             if isExpanded {
                 expandedPill
             } else {
                 collapsedPill
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            ZStack(alignment: .bottomLeading) {
+                if openMenu == .brush {
+                    VerticalMenu(
+                        items: BrushStroke.allCases.map {
+                            MenuItem(id: $0.rawValue, label: $0.label, icon: $0.icon, isSelected: brushStroke == $0)
+                        },
+                        onSelect: { id in
+                            if let s = BrushStroke.allCases.first(where: { $0.rawValue == id }) {
+                                brushStroke = s
+                                activeTool = .brush
+                            }
+                            openMenu = nil
+                        },
+                        onDismiss: { openMenu = nil }
+                    )
+                    .offset(x: 0, y: -toolbarHeight)
+                    .transition(menuTransition)
+                }
+
+                if openMenu == .pattern {
+                    VerticalMenu(
+                        items: FillPattern.allCases.map {
+                            MenuItem(id: $0.rawValue, label: $0.label, icon: $0.icon, isSelected: fillPattern == $0)
+                        },
+                        onSelect: { id in
+                            if let p = FillPattern.allCases.first(where: { $0.rawValue == id }) {
+                                fillPattern = p
+                                activeTool = .pattern
+                            }
+                            openMenu = nil
+                        },
+                        onDismiss: { openMenu = nil }
+                    )
+                    .offset(x: 88, y: -toolbarHeight)
+                    .transition(menuTransition)
+                }
+
+                if openMenu == .palette {
+                    PalettePanel(
+                        selectedColor: $selectedColor,
+                        selectedTheme: $selectedTheme,
+                        onDismiss: { openMenu = nil }
+                    )
+                    .offset(x: 0, y: -toolbarHeight)
+                    .transition(menuTransition)
+                }
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: openMenu)
+        }
         .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isExpanded)
-        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: openMenu)
     }
 
     private var expandedPill: some View {
@@ -366,52 +369,45 @@ struct VerticalMenu: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        ZStack {
-            Color.clear
-                .contentShape(Rectangle())
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-
-            VStack(spacing: 0) {
-                ForEach(items, id: \.id) { item in
-                    Button { onSelect(item.id) } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: item.icon)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(item.isSelected ? MTheme.accent : MTheme.ink)
-                                .frame(width: 20)
-                            Text(item.label)
-                                .font(.custom("Georgia", size: 13))
-                                .fontWeight(item.isSelected ? .semibold : .regular)
-                                .foregroundColor(item.isSelected ? MTheme.accent : MTheme.ink)
-                            Spacer()
-                            if item.isSelected {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(MTheme.accent)
-                            }
+        VStack(spacing: 0) {
+            ForEach(items, id: \.id) { item in
+                Button { onSelect(item.id) } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(item.isSelected ? MTheme.accent : MTheme.ink)
+                            .frame(width: 20)
+                        Text(item.label)
+                            .font(.custom("Georgia", size: 13))
+                            .fontWeight(item.isSelected ? .semibold : .regular)
+                            .foregroundColor(item.isSelected ? MTheme.accent : MTheme.ink)
+                        Spacer()
+                        if item.isSelected {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(MTheme.accent)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(item.isSelected ? MTheme.selectedFill : Color.clear)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(item.isSelected ? MTheme.selectedFill : Color.clear)
+                }
+                .buttonStyle(.plain)
 
-                    if item.id != items.last?.id {
-                        Divider()
-                            .background(MTheme.border.opacity(0.4))
-                            .padding(.horizontal, 10)
-                    }
+                if item.id != items.last?.id {
+                    Divider()
+                        .background(MTheme.border.opacity(0.4))
+                        .padding(.horizontal, 10)
                 }
             }
-            .frame(width: 160)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(MTheme.paper)
-                    .shadow(color: MTheme.ink.opacity(0.18), radius: 10, x: 0, y: 4)
-                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(MTheme.border, lineWidth: 1))
-            )
         }
+        .frame(width: 160)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(MTheme.paper)
+                .shadow(color: MTheme.ink.opacity(0.18), radius: 10, x: 0, y: 4)
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(MTheme.border, lineWidth: 1))
+        )
     }
 }
 
@@ -473,7 +469,7 @@ struct ToolbarButton: View {
                             )
                     )
                     .fixedSize()
-                    .offset(y: 30)
+                    .offset(y: -52)
                     .transition(.opacity)
                     .zIndex(10)
             }

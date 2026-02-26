@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-enum Tool: String {
+enum Tool: String, CaseIterable {
     case brush
+    case eraser
     case bucket
     case pattern
 }
@@ -82,3 +83,4 @@ struct PressableButton<Label: View>: View {
         )
     }
 }
+typealias BrushStrokeStyle = BrushStroke

@@ -8,7 +8,8 @@ struct DrawScreen: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
 
-    @State private var engine = CanvasEngine()
+    @StateObject private var store     = CanvasStore()
+    @StateObject private var transform = CanvasTransform()
     @State private var tool: Tool = .brush
     @State private var selectedColor: Color = MTheme.ink
     @State private var brushStroke: BrushStroke = .single
@@ -22,9 +23,10 @@ struct DrawScreen: View {
     @State private var showCompletionSheet = false
     @State private var startTime = Date()
     @State private var isLevelLoading = true
+    @State private var zoomScale: CGFloat = 1.0
 
-    private var canUndo: Bool { engine.canUndo }
-    private var canRedo: Bool { engine.canRedo }
+    private var canUndo: Bool { store.canUndo }
+    private var canRedo: Bool { store.canRedo }
 
     var body: some View {
         ZStack {
@@ -36,6 +38,9 @@ struct DrawScreen: View {
                     .padding(.bottom, 12)
                 canvasArea
                     .frame(maxHeight: .infinity)
+                    .overlay(alignment: .topLeading) {
+                        zoomHUD.padding(12)
+                    }
                 bottomArea
             }
             if templateExpanded {
@@ -48,15 +53,15 @@ struct DrawScreen: View {
             configureEngine()
         }
         .fullScreenCover(isPresented: $isLevelLoading) {
-            LevelLoadingView(levelId: levelId, templateImageName: templateImageName) {
+            LevelLoadingView {
                 isLevelLoading = false
             }
         }
-        .onChange(of: tool) { engine.config.activeTool = tool }
+        .onChange(of: tool) { store.config.activeTool = tool }
         .onChange(of: brushStroke) { applyBrushStroke() }
-        .onChange(of: assistOn) { engine.config.stabilizerOn = assistOn }
-        .onChange(of: symmetryOn) { engine.config.symmetryOn = symmetryOn }
-        .onChange(of: selectedColor) { engine.config.strokeColor = UIColor(selectedColor) }
+        .onChange(of: assistOn) { store.config.stabilizerOn = assistOn }
+        .onChange(of: symmetryOn) { store.config.symmetryOn = symmetryOn }
+        .onChange(of: selectedColor) { store.config.strokeColor = UIColor(selectedColor) }
         .sheet(isPresented: $showCompletionSheet) {
             LevelCompleteSheet(levelId: levelId) {
                 dismiss()
@@ -158,8 +163,8 @@ struct DrawScreen: View {
                             .shadow(color: MTheme.ink.opacity(0.25), radius: 24, x: 0, y: 8)
                             .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(MTheme.border, lineWidth: 1))
                     )
-                Text("Template")
-                    .font(.custom("Georgia-BoldItalic", size: 15))
+                Text("Level \(levelId)")
+                    .font(.custom("Georgia-BoldItalic", size: 16))
                     .foregroundColor(MTheme.paper.opacity(0.8))
                 Button {
                     withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
@@ -185,21 +190,59 @@ struct DrawScreen: View {
                 .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
             GeometryReader { geo in
                 let side = min(geo.size.width - 32, geo.size.height)
-                CanvasView(engine: $engine)
+                CanvasView(store: store, transform: transform, templateImage: UIImage(named: templateImageName))
                     .frame(width: side, height: side)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
-                    .overlay(
-                        Image(templateImageName)
-                            .resizable()
-                            .scaledToFit()
-                            .opacity(0.14)
-                            .allowsHitTesting(false)
-                            .padding(8)
-                    )
                     .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                    .onAppear { transform.setContainerSize(geo.size) }
+                    .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
             }
             .padding(.horizontal, 16)
         }
+    }
+
+    private var zoomHUD: some View {
+        HStack(spacing: 0) {
+            Button {
+                let next = max(transform.scale - 0.25, 0.75)
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.applyPinch(newScale: next) }
+                zoomScale = transform.scale
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(MTheme.ink)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+
+            Text(String(format: "%.1f×", transform.scale))
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(MTheme.ink.opacity(0.8))
+                .frame(minWidth: 38)
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { transform.resetToIdentity() }
+                    zoomScale = 1.0
+                }
+
+            Button {
+                let next = min(transform.scale + 0.25, 3.0)
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.applyPinch(newScale: next) }
+                zoomScale = transform.scale
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(MTheme.ink)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 2)
+        .background(
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay(Capsule().strokeBorder(MTheme.border.opacity(0.35), lineWidth: 0.5))
+                .shadow(color: MTheme.ink.opacity(0.08), radius: 4, x: 0, y: 2)
+        )
     }
 
     private var bottomArea: some View {
@@ -208,15 +251,16 @@ struct DrawScreen: View {
                 activeTool: Binding(
                     get: {
                         switch tool {
-                        case .brush: return DrawTool.brush
-                        case .bucket: return DrawTool.bucket
+                        case .brush:   return DrawTool.brush
+                        case .eraser:  return DrawTool.brush
+                        case .bucket:  return DrawTool.bucket
                         case .pattern: return DrawTool.pattern
                         }
                     },
                     set: { dt in
                         switch dt {
-                        case .brush: tool = .brush
-                        case .bucket: tool = .bucket
+                        case .brush:   tool = .brush
+                        case .bucket:  tool = .bucket
                         case .pattern: tool = .pattern
                         }
                     }
@@ -225,8 +269,8 @@ struct DrawScreen: View {
                 fillPattern: $fillPattern,
                 canUndo: Binding(get: { canUndo }, set: { _ in }),
                 canRedo: Binding(get: { canRedo }, set: { _ in }),
-                onUndo: { engine.undo() },
-                onRedo: { engine.redo() },
+                onUndo: { store.undo() },
+                onRedo: { store.redo() },
                 selectedColor: $selectedColor
             )
             .padding(.top, 12)
@@ -266,7 +310,7 @@ struct DrawScreen: View {
 
     private func handleComplete() {
         let dur = Int(Date().timeIntervalSince(startTime))
-        guard let img = engine.renderedCompositeUIImage() else { return }
+        guard let img = store.renderedComposite() else { return }
         let pngName = "\(UUID().uuidString).png"
         let art = Artwork(
             id: UUID(),
@@ -299,31 +343,31 @@ struct DrawScreen: View {
     private func applyBrushStroke() {
         switch brushStroke {
         case .single:
-            engine.config.doubleStrokeOn = false
-            engine.config.wavyStroke = false
+            store.config.doubleStrokeOn = false
+            store.config.wavyStroke = false
         case .double_:
-            engine.config.doubleStrokeOn = true
-            engine.config.wavyStroke = false
+            store.config.doubleStrokeOn = true
+            store.config.wavyStroke = false
         case .singleWavy:
-            engine.config.doubleStrokeOn = false
-            engine.config.wavyStroke = true
+            store.config.doubleStrokeOn = false
+            store.config.wavyStroke = true
         case .doubleWavy:
-            engine.config.doubleStrokeOn = true
-            engine.config.wavyStroke = true
+            store.config.doubleStrokeOn = true
+            store.config.wavyStroke = true
         }
     }
 
     private func configureEngine() {
-        engine.config.gapTolerance = 3
-        engine.config.boundaryIncludesTemplate = true
-        engine.config.fillBelowInk = true
-        engine.config.stabilizerOn = assistOn
-        engine.config.symmetryOn = symmetryOn
-        engine.config.doubleStrokeOn = false
-        engine.config.wavyStroke = false
-        engine.config.activeTool = tool
-        engine.config.strokeColor = UIColor(selectedColor)
-        engine.config.pattern = .dots
+        store.config.gapTolerance = 3
+        store.config.boundaryIncludesTemplate = true
+        store.config.fillBelowInk = true
+        store.config.stabilizerOn = assistOn
+        store.config.symmetryOn = symmetryOn
+        store.config.doubleStrokeOn = false
+        store.config.wavyStroke = false
+        store.config.activeTool = tool
+        store.config.strokeColor = UIColor(selectedColor)
+        store.config.pattern = .dots
     }
 }
 
@@ -365,7 +409,7 @@ struct LevelCompleteSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color(hex: "#2C2B2A"))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .padding(.horizontal, 32)
 

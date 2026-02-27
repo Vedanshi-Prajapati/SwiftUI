@@ -69,7 +69,9 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#F0EBE0").ignoresSafeArea()
+            Image("backg")
+                .resizable()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()

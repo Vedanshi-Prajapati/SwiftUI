@@ -58,7 +58,7 @@ struct GalleryView: View {
             .padding(.top, 10)
             .padding(.bottom, 16)
         }
-        .background(Color(hex: "#F0EBE0").ignoresSafeArea())
+        .background(Image("backg").resizable().ignoresSafeArea())
         .navigationTitle("Gallery")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -98,6 +98,6 @@ struct ArtworkDetailView: View {
 
             Spacer()
         }
-        .background(Color(hex: "#F0EBE0").ignoresSafeArea())
+        .background(Image("bgLong").resizable().ignoresSafeArea())
     }
 }

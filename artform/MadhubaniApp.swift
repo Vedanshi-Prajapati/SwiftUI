@@ -6,6 +6,7 @@ struct MadhubaniApp: App {
     var body: some Scene {
         WindowGroup {
             RootFlow()
+                .preferredColorScheme(.light)
         }
     }
 }

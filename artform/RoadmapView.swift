@@ -19,7 +19,9 @@ struct RoadmapView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color(hex: "#F0EBE0").ignoresSafeArea()
+            Image("backg")
+                .resizable()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 headerBar
@@ -176,30 +178,25 @@ struct JourneyNode: View {
                         .blur(radius: 8)
                 }
 
-                Circle().fill(Color(hex: "#1A1A1A")).frame(width: nodeSize + 7, height: nodeSize + 7)
-                Circle().fill(isUnlocked ? color : Color(hex: "#C0BBB5")).frame(width: nodeSize, height: nodeSize)
+                Image("levelCircle\(((levelId - 1) % 6) + 1)")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: nodeSize + 45, height: nodeSize + 45)
+                    .saturation(isUnlocked ? 1.0 : 0.0)
+                    .opacity(isUnlocked ? 1.0 : 0.55)
+
+                Text("\(levelId)")
+                    .font(.custom("Georgia-Bold", size: 24))
+                    .foregroundColor(isUnlocked ? Color(hex: "#1A1A1A") : Color(hex: "#9E9990"))
 
                 if isUnlocked {
-                    Image("bg")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: nodeSize, height: nodeSize)
-                        .clipShape(Circle())
-                        .opacity(0.12)
-                    Circle()
-                        .fill(RadialGradient(colors: [.white.opacity(0.28), .clear], center: .init(x: 0.35, y: 0.3), startRadius: 0, endRadius: nodeSize * 0.5))
-                        .frame(width: nodeSize, height: nodeSize)
                     if isCompleted {
                         Circle()
                             .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [4, 5]))
-                            .foregroundColor(.white.opacity(0.35))
+                            .foregroundColor(Color(hex: "#1A1A1A").opacity(0.35))
                             .frame(width: nodeSize - 10, height: nodeSize - 10)
                     }
                 }
-
-                Text("\(levelId)")
-                    .font(.custom("Georgia-Bold", size: 22))
-                    .foregroundColor(isUnlocked ? .white : Color(hex: "#9E9990"))
 
                 if !isUnlocked {
                     VStack { HStack { Spacer()

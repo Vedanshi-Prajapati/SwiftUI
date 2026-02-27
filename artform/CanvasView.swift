@@ -21,14 +21,10 @@ struct CanvasView: UIViewRepresentable {
         uiView.setLayers(fill: store.fillLayer, ink: store.inkLayer)
         uiView.activeTool = store.config.activeTool
 
-        let size = uiView.bounds.size
-        if size.width > 0, size.height > 0 {
-            let img = templateImage
-            DispatchQueue.main.async {
-                if let img { self.store.setTemplateBoundary(from: img, canvasSize: size) }
-                self.store.setCanvasSize(size)
-            }
-        }
+        // Size is now handled explicitly via onAppear in the parent view.
+        // We do not dynamically re-read uiView.bounds.size here because 
+        // scaling the view changes its bounds, which creates an infinite 
+        // loop of resetting the canvas buffer and interrupting gestures.
     }
 
     final class Coordinator: NSObject, CanvasUIViewDelegate {
@@ -50,7 +46,7 @@ struct CanvasView: UIViewRepresentable {
         }
 
         func canvasDidPinch(scale: CGFloat) {
-            transform.applyPinch(newScale: scale)
+            transform.applyScaleDelta(scale)
             canvasView?.setNeedsDisplay()
         }
 
@@ -142,14 +138,9 @@ final class CanvasUIView: UIView {
     }
 
     @objc private func handlePinch(_ gr: UIPinchGestureRecognizer) {
-        switch gr.state {
-        case .began:
-            pinchBaseScale = 1.0
-        case .changed:
-            let delta = gr.scale / pinchBaseScale
-            pinchBaseScale = gr.scale
-            delegate?.canvasDidPinch(scale: delta)
-        default: break
+        if gr.state == .changed || gr.state == .ended {
+            delegate?.canvasDidPinch(scale: gr.scale)
+            gr.scale = 1.0
         }
     }
 

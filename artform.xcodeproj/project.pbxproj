@@ -28,6 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EC1F39FF2F51347D00661A48 /* artform.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = artform.xctestplan; sourceTree = "<group>"; };
 		ECE976D92F348C2F00975E8D /* artform.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = artform.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ECE976E62F348C3100975E8D /* artformTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = artformTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ECE976F02F348C3100975E8D /* artformUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = artformUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -100,6 +101,7 @@
 		ECE976D02F348C2F00975E8D = {
 			isa = PBXGroup;
 			children = (
+				EC1F39FF2F51347D00661A48 /* artform.xctestplan */,
 				ECE976DB2F348C2F00975E8D /* artform */,
 				ECE976E92F348C3100975E8D /* artformTests */,
 				ECE976F32F348C3100975E8D /* artformUITests */,
@@ -427,6 +429,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SWVFJHTA4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -461,6 +464,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SWVFJHTA4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

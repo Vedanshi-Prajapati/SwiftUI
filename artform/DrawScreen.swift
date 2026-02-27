@@ -30,18 +30,28 @@ struct DrawScreen: View {
 
     var body: some View {
         ZStack {
-            MTheme.canvas.ignoresSafeArea()
-            VStack(spacing: 0) {
+            Image("backg").resizable().ignoresSafeArea()
+            VStack(spacing: 24) {
                 topBar
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
-                    .padding(.bottom, 12)
+
+                drawTabBar
+
+                HStack {
+                    Spacer()
+                    zoomHUD
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+
                 canvasArea
-                    .frame(maxHeight: .infinity)
-                    .overlay(alignment: .topLeading) {
-                        zoomHUD.padding(12)
-                    }
+                    .aspectRatio(1.0, contentMode: .fit)
+
+                Spacer(minLength: 0)
+
                 bottomArea
+                    .padding(.bottom, 16)
             }
             if templateExpanded {
                 templateExpandedOverlay
@@ -189,7 +199,7 @@ struct DrawScreen: View {
                 .padding(.horizontal, 16)
                 .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
             GeometryReader { geo in
-                let side = min(geo.size.width - 32, geo.size.height)
+                let side = max(1, min(geo.size.width - 32, geo.size.height))
                 ZStack {
                     Image(templateImageName)
                         .resizable()
@@ -218,20 +228,20 @@ struct DrawScreen: View {
         HStack(spacing: 0) {
             Button {
                 let next = max(transform.scale - 0.25, 0.75)
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.applyPinch(newScale: next) }
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.setScale(next) }
                 zoomScale = transform.scale
             } label: {
                 Image(systemName: "minus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(MTheme.ink)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 36, height: 36)
             }
             .buttonStyle(.plain)
 
             Text(String(format: "%.1f×", transform.scale))
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(.system(size: 15, weight: .medium, design: .monospaced))
                 .foregroundColor(MTheme.ink.opacity(0.8))
-                .frame(minWidth: 38)
+                .frame(minWidth: 48)
                 .onTapGesture {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { transform.resetToIdentity() }
                     zoomScale = 1.0
@@ -239,17 +249,18 @@ struct DrawScreen: View {
 
             Button {
                 let next = min(transform.scale + 0.25, 5.0)
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.applyPinch(newScale: next) }
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.setScale(next) }
                 zoomScale = transform.scale
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(MTheme.ink)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 36, height: 36)
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
         .background(
             Capsule()
                 .fill(.ultraThinMaterial)
@@ -288,16 +299,7 @@ struct DrawScreen: View {
             )
             .padding(.top, 12)
             .padding(.horizontal, 16)
-            drawTabBar
-                .padding(.top, 10)
-                .padding(.bottom, 20)
         }
-        .background(
-            UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24)
-                .fill(MTheme.canvas)
-                .shadow(color: MTheme.ink.opacity(0.07), radius: 10, x: 0, y: -3)
-                .ignoresSafeArea(edges: .bottom)
-        )
     }
 
     private var drawTabBar: some View {

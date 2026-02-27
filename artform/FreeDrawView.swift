@@ -12,6 +12,8 @@ struct FreeDrawView: View {
     @State private var selectedColor: Color = MTheme.ink
     @State private var fillPattern: FillPattern = .dots
     @State private var startTime = Date()
+    @State private var selectedTab: DrawTab = .draw
+    @State private var zoomScale: CGFloat = 1.0
 
     private var activeToolBinding: Binding<DrawTool> {
         Binding(
@@ -50,7 +52,7 @@ struct FreeDrawView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 10) {
+            VStack(spacing: 24) {
                 HStack {
                     Text("Create")
                         .font(MTheme.font(.sourceSerif, size: 22, weight: .bold))
@@ -84,19 +86,39 @@ struct FreeDrawView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
+                drawTabBar
+
+                HStack {
+                    Spacer()
+                    zoomHUD
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+
                 ZStack {
                     RoundedRectangle(cornerRadius: 22)
                         .fill(MTheme.paper)
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 16)
+                        .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
 
-                    CanvasView(store: store, transform: transform, templateImage: nil)
-                        .scaleEffect(transform.scale)
-                        .offset(x: transform.offset.width, y: transform.offset.height)
-                        .clipShape(RoundedRectangle(cornerRadius: 22))
-                        .padding(.horizontal, 12)
-                        .onAppear { transform.setContainerSize(CGSize(width: 400, height: 400)) }
+                    GeometryReader { geo in
+                        let side = max(1, min(geo.size.width - 32, geo.size.height))
+                        ZStack {
+                            CanvasView(store: store, transform: transform, templateImage: nil)
+                                .frame(width: side, height: side)
+                                .scaleEffect(transform.scale)
+                                .offset(x: transform.offset.width, y: transform.offset.height)
+                                .clipShape(RoundedRectangle(cornerRadius: 18))
+                        }
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                        .onAppear { transform.setContainerSize(geo.size) }
+                        .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
+                    }
+                    .padding(.horizontal, 16)
                 }
-                .frame(maxHeight: .infinity)
+                .aspectRatio(1.0, contentMode: .fit)
+
+                Spacer(minLength: 0)
 
                 FloatingToolbar(
                     activeTool: activeToolBinding,
@@ -108,10 +130,10 @@ struct FreeDrawView: View {
                     onRedo: { store.redo() },
                     selectedColor: $selectedColor
                 )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 10)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
             }
-            .background(MTheme.canvas)
+            .background(Image("backg").resizable().ignoresSafeArea())
             .onAppear { configureEngine() }
             .onChange(of: tool) { store.config.activeTool = tool }
             .onChange(of: brushStroke) { applyBrushStroke() }
@@ -141,6 +163,83 @@ struct FreeDrawView: View {
         case .double_:    store.config.doubleStrokeOn = true;  store.config.wavyStroke = false
         case .singleWavy: store.config.doubleStrokeOn = false; store.config.wavyStroke = true
         case .doubleWavy: store.config.doubleStrokeOn = true;  store.config.wavyStroke = true
+        }
+    }
+
+    private var zoomHUD: some View {
+        HStack(spacing: 0) {
+            Button {
+                let next = max(transform.scale - 0.25, 0.75)
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.setScale(next) }
+                zoomScale = transform.scale
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(MTheme.ink)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+
+            Text(String(format: "%.1f×", transform.scale))
+                .font(.system(size: 15, weight: .medium, design: .monospaced))
+                .foregroundColor(MTheme.ink.opacity(0.8))
+                .frame(minWidth: 48)
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { transform.resetToIdentity() }
+                    zoomScale = 1.0
+                }
+
+            Button {
+                let next = min(transform.scale + 0.25, 5.0)
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { transform.setScale(next) }
+                zoomScale = transform.scale
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(MTheme.ink)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay(Capsule().strokeBorder(MTheme.border.opacity(0.35), lineWidth: 0.5))
+                .shadow(color: MTheme.ink.opacity(0.08), radius: 4, x: 0, y: 2)
+        )
+    }
+
+    private var drawTabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(DrawTab.allCases, id: \.self) { tab in
+                DrawTabButton(tab: tab, isSelected: selectedTab == tab) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        selectedTab = tab
+                        applyTab(tab)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(MTheme.paper)
+                .overlay(Capsule().strokeBorder(MTheme.border.opacity(0.4), lineWidth: 1))
+                .padding(.horizontal, 20)
+        )
+    }
+
+    private func applyTab(_ tab: DrawTab) {
+        switch tab {
+        case .draw:
+            assistOn = false
+            symmetryOn = false
+        case .assist:
+            assistOn = true
+            symmetryOn = false
         }
     }
 }

@@ -40,7 +40,7 @@ private struct LottieView: UIViewRepresentable {
 struct LoaderOverlay: View {
     var body: some View {
         ZStack {
-            Color(hex: "#F0EBE0").ignoresSafeArea()
+            Image("backg").resizable().ignoresSafeArea()
             LottieView(loopMode: .loop, animationSpeed: 1.0)
                 .frame(width: 200, height: 200)
         }
@@ -52,7 +52,7 @@ struct LevelLoadingView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#F0EBE0").ignoresSafeArea()
+            Image("backg").resizable().ignoresSafeArea()
             LottieView(loopMode: .loop, animationSpeed: 1.0)
                 .frame(width: 200, height: 200)
         }

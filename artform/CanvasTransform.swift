@@ -16,8 +16,14 @@ final class CanvasTransform: ObservableObject {
         clampOffset()
     }
 
-    func applyPinch(newScale: CGFloat) {
+    func setScale(_ newScale: CGFloat) {
         scale = clamped(newScale, in: minScale...maxScale)
+        clampOffset()
+    }
+
+    func applyScaleDelta(_ delta: CGFloat) {
+        let proposedScale = scale * delta
+        scale = clamped(proposedScale, in: minScale...maxScale)
         clampOffset()
     }
 

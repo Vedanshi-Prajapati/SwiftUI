@@ -1,0 +1,44 @@
+{
+  "configurations" : [
+    {
+      "id" : "BA9E54F2-8DB1-403F-9ADE-BDFFE277B9E4",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "environmentVariableEntries" : [
+      {
+        "key" : "IDEPreferLogStreaming",
+        "value" : "YES"
+      }
+    ],
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:artform.xcodeproj",
+      "identifier" : "ECE976D82F348C2F00975E8D",
+      "name" : "artform"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:artform.xcodeproj",
+        "identifier" : "ECE976E52F348C3100975E8D",
+        "name" : "artformTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:artform.xcodeproj",
+        "identifier" : "ECE976EF2F348C3100975E8D",
+        "name" : "artformUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

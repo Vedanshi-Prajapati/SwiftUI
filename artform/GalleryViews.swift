@@ -30,7 +30,7 @@ struct GalleryView: View {
                                     .foregroundStyle(.primary)
 
                                 Text(art.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.custom("Georgia", size: 13))
+                                    .font(.custom("Georgia", size: 16))
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -64,7 +64,7 @@ struct GalleryView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("Gallery")
-                    .font(.custom("Georgia-Bold", size: 20))
+                    .font(.custom("Georgia-Bold", size: 32))
             }
         }
     }

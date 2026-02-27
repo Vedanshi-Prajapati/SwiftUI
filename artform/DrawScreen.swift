@@ -89,7 +89,7 @@ struct DrawScreen: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Back")
-                        .font(.custom("Georgia", size: 15))
+                        .font(.custom("Georgia", size: 16))
                 }
                 .foregroundColor(MTheme.ink)
                 .padding(.horizontal, 14)
@@ -108,7 +108,7 @@ struct DrawScreen: View {
             PressableButton(isPressed: $completePressed, action: { handleComplete() }) {
                 HStack(spacing: 6) {
                     Text("Complete")
-                        .font(.custom("Georgia-Bold", size: 15))
+                        .font(.custom("Georgia-Bold", size: 16))
                     Image(systemName: "checkmark")
                         .font(.system(size: 12, weight: .bold))
                 }
@@ -199,7 +199,12 @@ struct DrawScreen: View {
                 .padding(.horizontal, 16)
                 .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
             GeometryReader { geo in
-                let side = max(1, min(geo.size.width - 32, geo.size.height))
+                let rawW = geo.size.width
+                let rawH = geo.size.height
+                let w = (rawW.isNaN || rawW.isInfinite) ? 400.0 : rawW
+                let h = (rawH.isNaN || rawH.isInfinite) ? 400.0 : rawH
+                let side = max(1.0, min(w - 32.0, h))
+                
                 ZStack {
                     Image(templateImageName)
                         .resizable()
@@ -208,17 +213,15 @@ struct DrawScreen: View {
                         .opacity(0.12)
                         .scaleEffect(transform.scale)
                         .offset(x: transform.offset.width, y: transform.offset.height)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
                     
                     CanvasView(store: store, transform: transform, templateImage: UIImage(named: templateImageName))
                         .frame(width: side, height: side)
-                        .scaleEffect(transform.scale)
-                        .offset(x: transform.offset.width, y: transform.offset.height)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
-                .position(x: geo.size.width / 2, y: geo.size.height / 2)
-                .onAppear { transform.setContainerSize(geo.size) }
-                .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
+                .frame(width: side, height: side)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .position(x: w / 2.0, y: h / 2.0)
+                .onAppear { transform.setContainerSize(CGSize(width: side, height: side)) }
+                .onChange(of: geo.size) { oldSize, newSize in transform.setContainerSize(CGSize(width: side, height: side)) }
             }
             .padding(.horizontal, 16)
         }
@@ -410,7 +413,7 @@ struct LevelCompleteSheet: View {
                     .foregroundColor(Color(hex: "#1A1A1A"))
 
                 Text("Your artwork has been saved to Gallery.\nLevel \(levelId + 1) is now unlocked.")
-                    .font(.custom("Georgia", size: 15))
+                    .font(.custom("Georgia", size: 16))
                     .foregroundColor(Color(hex: "#5C5448"))
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)

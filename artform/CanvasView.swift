@@ -20,11 +20,18 @@ struct CanvasView: UIViewRepresentable {
     func updateUIView(_ uiView: CanvasUIView, context: Context) {
         uiView.setLayers(fill: store.fillLayer, ink: store.inkLayer)
         uiView.activeTool = store.config.activeTool
+        uiView.setCanvasTransform(scale: transform.scale, offset: transform.offset)
 
-        // Size is now handled explicitly via onAppear in the parent view.
-        // We do not dynamically re-read uiView.bounds.size here because 
-        // scaling the view changes its bounds, which creates an infinite 
-        // loop of resetting the canvas buffer and interrupting gestures.
+        let size = uiView.bounds.size
+        if size.width > 0 && size.height > 0 {
+            if store.inkLayer == nil {
+                let img = templateImage
+                DispatchQueue.main.async {
+                    if let img { self.store.setTemplateBoundary(from: img, canvasSize: size) }
+                    self.store.setCanvasSize(size)
+                }
+            }
+        }
     }
 
     final class Coordinator: NSObject, CanvasUIViewDelegate {
@@ -69,12 +76,13 @@ final class CanvasUIView: UIView {
     var activeTool: Tool = .brush
 
     private var strokePoints: [CGPoint] = []
+    
+    private let drawContainer = UIView()
     private let fillLayerView = UIImageView()
     private let inkLayerView  = UIImageView()
 
     private var pinchGesture: UIPinchGestureRecognizer!
     private var panGesture: UIPanGestureRecognizer!
-    private var pinchBaseScale: CGFloat = 1.0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -83,8 +91,10 @@ final class CanvasUIView: UIView {
 
         fillLayerView.contentMode = .scaleToFill
         inkLayerView.contentMode  = .scaleToFill
-        addSubview(fillLayerView)
-        addSubview(inkLayerView)
+        
+        addSubview(drawContainer)
+        drawContainer.addSubview(fillLayerView)
+        drawContainer.addSubview(inkLayerView)
 
         pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
         pinchGesture.delegate = self
@@ -100,8 +110,15 @@ final class CanvasUIView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        fillLayerView.frame = bounds
-        inkLayerView.frame  = bounds
+        drawContainer.bounds = CGRect(origin: .zero, size: bounds.size)
+        drawContainer.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        fillLayerView.frame = drawContainer.bounds
+        inkLayerView.frame  = drawContainer.bounds
+    }
+
+    func setCanvasTransform(scale: CGFloat, offset: CGSize) {
+        drawContainer.transform = CGAffineTransform(translationX: offset.width, y: offset.height)
+            .scaledBy(x: scale, y: scale)
     }
 
     func setLayers(fill: UIImage?, ink: UIImage?) {
@@ -111,17 +128,17 @@ final class CanvasUIView: UIView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard touches.count == 1, let t = touches.first else { return }
-        let p = t.location(in: self)
+        let p = t.location(in: drawContainer)
         strokePoints = [p]
         if activeTool == .bucket || activeTool == .pattern {
-            delegate?.canvasDidFill(at: p, size: bounds.size)
+            delegate?.canvasDidFill(at: p, size: drawContainer.bounds.size)
         }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard activeTool == .brush, touches.count == 1,
               let t = touches.first else { return }
-        strokePoints.append(t.location(in: self))
+        strokePoints.append(t.location(in: drawContainer))
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -129,7 +146,7 @@ final class CanvasUIView: UIView {
             strokePoints.removeAll()
             return
         }
-        delegate?.canvasDidStroke(points: strokePoints, size: bounds.size)
+        delegate?.canvasDidStroke(points: strokePoints, size: drawContainer.bounds.size)
         strokePoints.removeAll()
     }
 

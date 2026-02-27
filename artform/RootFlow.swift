@@ -98,7 +98,7 @@ struct OnboardingView: View {
                         .font(.custom("Georgia-Bold", size: 30))
                         .foregroundColor(Color(hex: "#1A1A1A"))
                     Text("Madhubani")
-                        .font(.custom("Georgia-BoldItalic", size: 32))
+                        .font(.custom("Georgia-BoldItalic", size: 34))
                         .foregroundColor(Color(hex: "#C8392B"))
                 }
                 .opacity(textOpacity)
@@ -106,7 +106,7 @@ struct OnboardingView: View {
                 Spacer().frame(height: 18)
 
                 Text("Enter a world where every line is a\nritual and every color is nature.")
-                    .font(.custom("Georgia", size: 16))
+                    .font(.custom("Georgia", size: 18))
                     .foregroundColor(Color(hex: "#5C5448"))
                     .multilineTextAlignment(.center)
                     .lineSpacing(5)

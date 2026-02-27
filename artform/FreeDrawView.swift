@@ -55,8 +55,7 @@ struct FreeDrawView: View {
             VStack(spacing: 24) {
                 HStack {
                     Text("Create")
-                        .font(MTheme.font(.sourceSerif, size: 22, weight: .bold))
-
+                        .font(.custom("Georgia-Bold", size: 32))
                     Spacer()
 
                     Button {
@@ -76,7 +75,7 @@ struct FreeDrawView: View {
                         }
                     } label: {
                         Text("Save")
-                            .font(MTheme.font(.sfPro, size: 15, weight: .semibold))
+                            .font(MTheme.font(.sfPro, size: 16, weight: .semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(MTheme.paper)
@@ -102,17 +101,21 @@ struct FreeDrawView: View {
                         .shadow(color: MTheme.ink.opacity(0.08), radius: 8, x: 0, y: 2)
 
                     GeometryReader { geo in
-                        let side = max(1, min(geo.size.width - 32, geo.size.height))
+                        let rawW = geo.size.width
+                        let rawH = geo.size.height
+                        let w = (rawW.isNaN || rawW.isInfinite) ? 400.0 : rawW
+                        let h = (rawH.isNaN || rawH.isInfinite) ? 400.0 : rawH
+                        let side = max(1.0, min(w - 32.0, h))
+                        
                         ZStack {
                             CanvasView(store: store, transform: transform, templateImage: nil)
                                 .frame(width: side, height: side)
-                                .scaleEffect(transform.scale)
-                                .offset(x: transform.offset.width, y: transform.offset.height)
-                                .clipShape(RoundedRectangle(cornerRadius: 18))
                         }
-                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
-                        .onAppear { transform.setContainerSize(geo.size) }
-                        .onChange(of: geo.size) { transform.setContainerSize(geo.size) }
+                        .frame(width: side, height: side)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .position(x: w / 2.0, y: h / 2.0)
+                        .onAppear { transform.setContainerSize(CGSize(width: side, height: side)) }
+                        .onChange(of: geo.size) { oldSize, newSize in transform.setContainerSize(CGSize(width: side, height: side)) }
                     }
                     .padding(.horizontal, 16)
                 }
